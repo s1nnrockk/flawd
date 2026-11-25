@@ -77,7 +77,8 @@ def _rank_key(row: dict[str, Any]) -> tuple[int, str]:
     return rank_value, str(row.get("message_id") or "")
 
 
-def _best_path(rows: list[dict[str, Any]], languages: set[str]) -> list[dict[str, str]] | None:
+def _best_path_rows(rows: list[dict[str, Any]], languages: set[str]) -> list[dict[str, Any]] | None:
+    """Return the selected message rows so metadata stays attached to the exact branch."""
     by_id = {str(row.get("message_id")): row for row in rows if row.get("message_id")}
     children: dict[str | None, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -106,19 +107,31 @@ def _best_path(rows: list[dict[str, Any]], languages: set[str]) -> list[dict[str
 
     if len(path) < 2 or path[0].get("role") != "prompter" or path[-1].get("role") != "assistant":
         return None
-    messages: list[dict[str, str]] = []
     expected = "prompter"
     for row in path:
-        role = row.get("role")
-        if role != expected:
+        if row.get("role") != expected:
             return None
-        messages.append({"role": ROLE_MAP[role], "content": str(row["text"]).strip()})
         expected = "assistant" if expected == "prompter" else "prompter"
+    messages = [
+        {"role": ROLE_MAP[row["role"]], "content": str(row["text"]).strip()}
+        for row in path
+    ]
     try:
         format_conversation(messages)
     except ValueError:
         return None
-    return messages
+    return path
+
+
+def _best_path(rows: list[dict[str, Any]], languages: set[str]) -> list[dict[str, str]] | None:
+    """Compatibility wrapper returning normalized messages for the selected branch."""
+    path = _best_path_rows(rows, languages)
+    if path is None:
+        return None
+    return [
+        {"role": ROLE_MAP[row["role"]], "content": str(row["text"]).strip()}
+        for row in path
+    ]
 
 
 def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], split_name: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
@@ -137,15 +150,17 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], 
     output: list[dict[str, Any]] = []
     skipped_trees = 0
     for tree_rows in trees.values():
-        messages = _best_path(tree_rows, languages)
-        if messages is None:
+        path_rows = _best_path_rows(tree_rows, languages)
+        if path_rows is None:
             skipped_trees += 1
             continue
-        path_texts = {message["content"] for message in messages}
+        messages = [
+            {"role": ROLE_MAP[row["role"]], "content": str(row["text"]).strip()}
+            for row in path_rows
+        ]
         path_languages = sorted({
             str(row.get("lang") or "").lower().split("-")[0]
-            for row in tree_rows
-            if str(row.get("text") or "").strip() in path_texts
+            for row in path_rows
         } & languages)
         output.append({
             "messages": messages,
