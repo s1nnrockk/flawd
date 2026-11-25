@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <iostream>
 #include <limits>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -71,6 +72,19 @@ int main() {
         throw std::runtime_error("Checkpoint overwrite did not atomically replace model weights");
     if (std::filesystem::exists(checkpoint_path + ".tmp"))
         throw std::runtime_error("Checkpoint save left a temporary file behind");
+    auto non_finite_parameters = model.parameters();
+    non_finite_parameters.front().set_value(std::numeric_limits<float>::quiet_NaN());
+    bool rejected_non_finite_save = false;
+    try { model.save_checkpoint(checkpoint_path); }
+    catch (const std::runtime_error&) { rejected_non_finite_save = true; }
+    if (!rejected_non_finite_save)
+        throw std::runtime_error("Checkpoint writer accepted a non-finite weight");
+    non_finite_parameters.front().set_value(0.0F);
+    model.load_checkpoint(checkpoint_path);
+    if (std::fabs(model.parameters().front().value() - (original_weight + 1.0F)) > 1e-6F)
+        throw std::runtime_error("Failed checkpoint write damaged the previous valid checkpoint");
+    if (std::filesystem::exists(checkpoint_path + ".tmp"))
+        throw std::runtime_error("Failed checkpoint write left a temporary file behind");
     auto different_heads = config;
     different_heads.attention_heads = 4;
     flawd::TransformerModel incompatible_model(different_heads);
