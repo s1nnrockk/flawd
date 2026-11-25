@@ -24,12 +24,12 @@ datasets, prompts, or proprietary implementation.
 
 ## Model-development implications
 
-The current byte-level Transformer is only a tiny next-token prediction
+The current byte-level/BPE Transformer is only a tiny next-token prediction
 prototype. These behavior goals require much more than increasing parameter
 count. The planned path is:
 
 1. Improve the tokenizer, context handling, batching, and model efficiency;
-   configurable multi-head causal attention is now part of the tiny baseline.
+   deterministic BPE and configurable multi-head causal attention are now part of the tiny baseline.
 2. Build a legally documented, high-quality pretraining corpus with language
    balance, deduplication, and held-out evaluation data.
 3. Assistant-only loss masking is implemented in FLAWDTOK v2 and the C++ trainer.
@@ -54,7 +54,7 @@ count. The planned path is:
 
 ## Current limitations
 
-The present FLAWD model has a byte-level vocabulary, a very short context window,
+The present FLAWD model has a compact byte-level or BPE vocabulary, a very short context window,
 a compact multi-head architecture, and a basic next-token trainer. Conversation serialization and assistant-only loss masking are implemented.
 A sufficiently large, reviewed supervised instruction-tuning run has not yet been performed. It is an engineering
 prototype, not a Claude-level assistant. These goals describe the direction;
