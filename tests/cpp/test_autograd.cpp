@@ -16,6 +16,14 @@ int main() {
     near(y.value(), 15.0F, "scalar expression value failed");
     near(x.grad(), 8.0F, "scalar gradient failed");
 
+    flawd::Embedding embedding(16, 4, 9);
+    const auto embedded = embedding.forward(3);
+    expect(embedded.size() == 4, "embedding dimension mismatch");
+    expect(embedding.parameters().size() == 64, "embedding parameter count mismatch");
+    bool bad_token = false;
+    try { (void)embedding.forward(16); } catch (const std::out_of_range&) { bad_token = true; }
+    expect(bad_token, "embedding accepted an out-of-range token");
+
     flawd::Linear linear(1, 1, 7);
     auto params = linear.parameters();
     flawd::SGD optimizer(params, 0.05F);
