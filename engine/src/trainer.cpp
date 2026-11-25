@@ -42,6 +42,8 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
     for (const auto token : token_stream)
         if (token >= model_.config().vocabulary_size)
             throw std::out_of_range("Training stream contains a token outside the vocabulary");
+    for (const auto flag : loss_mask)
+        if (flag > 1) throw std::invalid_argument("Training loss mask values must be 0 or 1");
 
     TrainingStats stats;
     double total_loss = 0.0;
@@ -79,6 +81,8 @@ TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& tok
     for (const auto token : token_stream)
         if (token >= model_.config().vocabulary_size)
             throw std::out_of_range("Evaluation stream contains a token outside the vocabulary");
+    for (const auto flag : loss_mask)
+        if (flag > 1) throw std::invalid_argument("Evaluation loss mask values must be 0 or 1");
 
     TrainingStats stats;
     double total_loss = 0.0;
