@@ -17,10 +17,11 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
     """Return token IDs and next-token loss flags (1 = include in loss)."""
     if not any(marker in text for marker in _ROLE_MARKERS):
         ids = tokenizer.encode(text, add_bos=True, add_eos=True)
-        return ids, [0] + [1] * (len(ids) - 2) + [0]
+        return ids, [0] + [1] * (len(ids) - 1)
 
     mask = bytearray(len(text.encode("utf-8")))
     cursor = 0
+    final_role = None
     while cursor < len(text):
         next_marker = min(
             ((text.find(marker, cursor), marker) for marker in _ROLE_MARKERS
@@ -31,6 +32,7 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
         if next_marker[0] < 0:
             break
         position, marker = next_marker
+        final_role = marker
         content_start = position + len(marker)
         next_positions = [text.find(candidate, content_start) for candidate in _ROLE_MARKERS]
         next_positions = [value for value in next_positions if value >= 0]
@@ -43,7 +45,7 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
 
     body = tokenizer.encode(text)
     ids = [tokenizer.BOS_ID, *body, tokenizer.EOS_ID]
-    flags = [0, *mask, 0]
+    flags = [0, *mask, int(final_role == "<|assistant|>\\n")]
     return ids, flags
 
 
