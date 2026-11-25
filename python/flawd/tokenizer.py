@@ -55,7 +55,7 @@ class ByteBPETokenizer(ByteTokenizer):
 
     def __init__(self, merges: list[tuple[int, int]] | None = None):
         self.merges = list(merges or [])
-        if len(self.merges) > 65536 - self.BOS_ID - 1:
+        if len(self.merges) > 65536 - 259:
             raise ValueError("BPE vocabulary exceeds the uint16 token format")
         self.VOCAB_SIZE = 259 + len(self.merges)
         self.NAME = "utf8-byte-bpe-v1"
