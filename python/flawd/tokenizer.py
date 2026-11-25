@@ -184,6 +184,16 @@ class ByteBPETokenizer(ByteTokenizer):
             "utf-8", errors="replace"
         )
 
+    @property
+    def fingerprint(self) -> int:
+        payload = bytearray(_HEADER.pack(_MAGIC, _VERSION, self.VOCAB_SIZE))
+        for left, right in self.merges:
+            payload.extend(_MERGE.pack(left, right))
+        value = 14695981039346656037
+        for byte in payload:
+            value = ((value ^ byte) * 1099511628211) & 0xffffffffffffffff
+        return value
+
     def save(self, path: str | Path) -> None:
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
