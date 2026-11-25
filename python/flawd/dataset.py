@@ -102,8 +102,11 @@ def build_clean_dataset(
         }
 
     validation_path = Path(validation_destination)
+    source_path = Path(source).resolve()
     if destination_path.resolve() == validation_path.resolve():
         raise ValueError("Training and validation output paths must be different")
+    if source_path in {destination_path.resolve(), validation_path.resolve()}:
+        raise ValueError("Source and output paths must be different")
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError("validation_ratio must be between 0 and 1")
     if len(records) < 2:
