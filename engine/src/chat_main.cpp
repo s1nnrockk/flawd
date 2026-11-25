@@ -69,37 +69,46 @@ int main(int argc, char** argv) {
         model.load_checkpoint(argv[1]);
 
         std::cout << "FLAWD local model loaded. Enter a prompt (empty line to quit).\n";
+        std::vector<std::size_t> conversation_tokens{257};
+        const auto append_text = [&](const std::string& text) {
+            if (bpe_tokenizer) {
+                const auto encoded = bpe_tokenizer->encode(text);
+                conversation_tokens.insert(conversation_tokens.end(), encoded.begin(), encoded.end());
+            } else {
+                for (const unsigned char byte : text) conversation_tokens.push_back(byte);
+            }
+        };
+
         std::string prompt;
         while (std::cout << "\nYou> " && std::getline(std::cin, prompt)) {
             if (prompt.empty()) break;
-            std::vector<std::size_t> tokens;
-            tokens.reserve(prompt.size() + 128);
-            tokens.push_back(257);
-            const std::string formatted_prompt = "<|user|>\n" + prompt + "\n<|assistant|>\n";
-            if (bpe_tokenizer) {
-                const auto encoded = bpe_tokenizer->encode(formatted_prompt);
-                tokens.insert(tokens.end(), encoded.begin(), encoded.end());
-            } else {
-                for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
-            }
+            append_text("<|user|>\n" + prompt + "\n<|assistant|>\n");
             std::cout << "FLAWD> " << std::flush;
+            std::string generated_text;
 
             for (std::size_t step = 0; step < 128; ++step) {
-                const std::size_t start = tokens.size() > config.context_length
-                    ? tokens.size() - config.context_length : 0;
+                const std::size_t start = conversation_tokens.size() > config.context_length
+                    ? conversation_tokens.size() - config.context_length : 0;
                 const std::vector<std::size_t> context(
-                    tokens.begin() + static_cast<std::ptrdiff_t>(start), tokens.end());
+                    conversation_tokens.begin() + static_cast<std::ptrdiff_t>(start),
+                    conversation_tokens.end());
                 const auto logits = model.forward_last(context);
                 const auto next_token = sample_next_token(logits, temperature, top_k, random);
                 if (next_token == 258 || next_token == 257) break;
                 if (next_token == 256) continue;
-                tokens.push_back(next_token);
+                conversation_tokens.push_back(next_token);
+
+                std::string piece;
                 if (next_token <= 255) {
-                    std::cout << static_cast<char>(next_token) << std::flush;
+                    piece.push_back(static_cast<char>(next_token));
                 } else if (bpe_tokenizer && next_token >= 259) {
-                    std::cout << bpe_tokenizer->decode(next_token) << std::flush;
+                    piece = bpe_tokenizer->decode(next_token);
                 }
+                std::cout << piece << std::flush;
+                generated_text += piece;
             }
+            if (generated_text.empty() || generated_text.back() != '\n')
+                append_text("\n");
             std::cout << '\n';
         }
         return 0;
