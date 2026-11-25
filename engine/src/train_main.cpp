@@ -141,12 +141,15 @@ int main(int argc, char** argv) {
         double best_validation_loss = std::numeric_limits<double>::infinity();
         flawd::TrainingStats best_validation_stats;
 
+        constexpr std::size_t gradient_accumulation = 4;
         for (std::size_t epoch = 1; epoch <= epochs; ++epoch) {
-            const auto epoch_stats = trainer.train(training.tokens, training.loss_mask, 1);
+            const auto epoch_stats = trainer.train(training.tokens, training.loss_mask, 1, 1,
+                                                   gradient_accumulation);
             total_steps += epoch_stats.steps;
             total_loss += epoch_stats.average_loss * static_cast<double>(epoch_stats.steps);
             std::cout << "Epoch " << epoch << "/" << epochs
-                      << " | training loss: " << epoch_stats.average_loss;
+                      << " | training loss: " << epoch_stats.average_loss
+                      << " | optimizer updates: " << trainer.steps();
 
             if (argc >= 5) {
                 const auto validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
