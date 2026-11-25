@@ -159,6 +159,9 @@ def build_clean_dataset(
         else:
             merge_provenance(records[positions[text]], record)
 
+    if shuffle_seed is not None:
+        random.Random(shuffle_seed).shuffle(records)
+
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     if validation_destination is None:
