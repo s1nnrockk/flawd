@@ -51,7 +51,7 @@ jobs:
         working-directory: python
         shell: pwsh
         run: |
-          ..\build\Release\flawd_train.exe training-run\train.tokens training-run\model.flawd 2 training-run\validation.tokens - 64 32 64 2 4 2>&1 | Tee-Object -FilePath training-run\training.log
+          ..\build\Release\flawd_train.exe training-run\train.tokens training-run\model.flawd 2 training-run\validation.tokens - 128 32 64 2 4 2>&1 | Tee-Object -FilePath training-run\training.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Write run metadata
@@ -64,7 +64,7 @@ jobs:
           Dataset revision: ${{ github.sha }}
           Split: deterministic, 90% train / 10% validation, seed 2026
           Tokenizer: byte-level BPE, target vocabulary 512, fitted on training split only
-          Model: context 64, embedding 32, feed-forward 64, 2 layers, 4 attention heads
+          Model: context 128, embedding 32, feed-forward 64, 2 layers, 4 attention heads
           Training: 2 epochs maximum, Adam, assistant-only loss mask, validation checkpoint selection
           Hardware: GitHub-hosted Windows runner (CPU)
           "@ | Set-Content -Encoding utf8 training-run\RUN.txt
