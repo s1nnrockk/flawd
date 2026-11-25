@@ -84,6 +84,30 @@ class OASSTImportTests(unittest.TestCase):
         self.assertEqual(validation, [record])
         self.assertEqual(stats["train_duplicates_removed"], 2)
 
+    def test_cross_split_dedup_preserves_all_source_licenses(self):
+        from flawd.oasst_import import _deduplicate_splits
+        train_record = {
+            "messages": [
+                {"role": "user", "content": "Same question"},
+                {"role": "assistant", "content": "Same answer"},
+            ],
+            "source": "Dolly",
+            "license": "CC-BY-SA-3.0",
+        }
+        validation_record = {
+            "messages": [
+                {"role": "user", "content": "Same question"},
+                {"role": "assistant", "content": "Same answer"},
+            ],
+            "source": "OpenAssistant/oasst1",
+            "license": "Apache-2.0",
+        }
+        train, validation, stats = _deduplicate_splits([train_record], [validation_record])
+        self.assertEqual(train, [])
+        self.assertEqual(validation[0]["sources"], ["OpenAssistant/oasst1", "Dolly"])
+        self.assertEqual(validation[0]["licenses"], ["Apache-2.0", "CC-BY-SA-3.0"])
+        self.assertEqual(stats["train_duplicates_removed"], 1)
+
     def test_reads_list_of_label_objects(self):
         from flawd.oasst_import import _usable
         row = {
