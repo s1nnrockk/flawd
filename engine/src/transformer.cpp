@@ -94,6 +94,40 @@ Sequence CausalSelfAttention::forward(const Sequence& input) {
     return result;
 }
 
+ScalarVector CausalSelfAttention::forward_last(const Sequence& input) {
+    validate_sequence(input, embedding_size_);
+    ScalarVector concatenated;
+    concatenated.reserve(embedding_size_);
+    const float scale_factor = std::sqrt(static_cast<float>(head_size_));
+    for (std::size_t head = 0; head < head_count_; ++head) {
+        const auto query = queries_[head].forward(input.back());
+        Sequence keys;
+        Sequence values;
+        keys.reserve(input.size());
+        values.reserve(input.size());
+        for (const auto& token : input) {
+            keys.push_back(keys_[head].forward(token));
+            values.push_back(values_[head].forward(token));
+        }
+        ScalarVector scores;
+        scores.reserve(input.size());
+        for (const auto& key : keys) {
+            Scalar score(0.0F);
+            for (std::size_t dimension = 0; dimension < head_size_; ++dimension)
+                score = score + query[dimension] * key[dimension];
+            scores.push_back(score / Scalar(scale_factor));
+        }
+        const auto weights = softmax(scores);
+        for (std::size_t dimension = 0; dimension < head_size_; ++dimension) {
+            Scalar weighted_sum(0.0F);
+            for (std::size_t key_index = 0; key_index < input.size(); ++key_index)
+                weighted_sum = weighted_sum + weights[key_index] * values[key_index][dimension];
+            concatenated.push_back(weighted_sum);
+        }
+    }
+    return output_.forward(concatenated);
+}
+
 std::vector<Scalar> CausalSelfAttention::parameters() {
     std::vector<Scalar> result;
     for (std::size_t head = 0; head < head_count_; ++head) {
@@ -140,6 +174,21 @@ Sequence TransformerBlock::forward(const Sequence& input) {
         output.push_back(add_vectors(token, projected));
     }
     return output;
+}
+
+ScalarVector TransformerBlock::forward_last(const Sequence& input) {
+    if (input.empty()) throw std::invalid_argument("Transformer block input cannot be empty");
+    Sequence normalized;
+    normalized.reserve(input.size());
+    for (const auto& token : input) normalized.push_back(attention_norm_.forward(token));
+    const auto attention_output = attention_.forward_last(normalized);
+    const auto residual = add_vectors(input.back(), attention_output);
+    const auto normalized_token = feed_forward_norm_.forward(residual);
+    const auto pre_activation = feed_forward_in_.forward(normalized_token);
+    ScalarVector hidden;
+    hidden.reserve(pre_activation.size());
+    for (const auto& value : pre_activation) hidden.push_back(flawd::relu(value));
+    return add_vectors(residual, feed_forward_out_.forward(hidden));
 }
 
 std::vector<Scalar> TransformerBlock::parameters() {
@@ -196,8 +245,10 @@ ScalarVector TransformerModel::forward_last(const std::vector<std::size_t>& toke
     for (std::size_t position = 0; position < token_ids.size(); ++position)
         hidden.push_back(add_vectors(token_embedding_.forward(token_ids[position]),
                                      position_embedding_.forward(position)));
-    for (auto& block : blocks_) hidden = block.forward(hidden);
-    return language_head_.forward(final_norm_.forward(hidden.back()));
+    for (std::size_t i = 0; i + 1 < blocks_.size(); ++i)
+        hidden = blocks_[i].forward(hidden);
+    const auto final_hidden = blocks_.back().forward_last(hidden);
+    return language_head_.forward(final_norm_.forward(final_hidden));
 }
 
 std::vector<Scalar> TransformerModel::parameters() {
