@@ -14,6 +14,7 @@ public:
     const std::vector<std::size_t>& shape() const noexcept;
     const std::vector<float>& values() const noexcept;
     std::size_t size() const noexcept;
+    std::size_t rank() const noexcept;
 
     float& operator[](std::size_t index);
     const float& operator[](std::size_t index) const;
@@ -27,7 +28,12 @@ private:
 };
 
 Tensor add(const Tensor& left, const Tensor& right);
+Tensor subtract(const Tensor& left, const Tensor& right);
 Tensor multiply(const Tensor& left, const Tensor& right);
 Tensor scale(const Tensor& tensor, float factor);
+Tensor relu(const Tensor& tensor);
+Tensor matmul(const Tensor& left, const Tensor& right);
+Tensor transpose_2d(const Tensor& tensor);
+Tensor softmax(const Tensor& tensor);
 
 } // namespace flawd
