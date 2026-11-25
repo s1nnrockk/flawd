@@ -168,6 +168,19 @@ Sequence TransformerModel::forward(const std::vector<std::size_t>& token_ids) {
     return logits;
 }
 
+ScalarVector TransformerModel::forward_last(const std::vector<std::size_t>& token_ids) {
+    if (token_ids.empty()) throw std::invalid_argument("Model input cannot be empty");
+    if (token_ids.size() > config_.context_length)
+        throw std::length_error("Input exceeds configured context length");
+    Sequence hidden;
+    hidden.reserve(token_ids.size());
+    for (std::size_t position = 0; position < token_ids.size(); ++position)
+        hidden.push_back(add_vectors(token_embedding_.forward(token_ids[position]),
+                                     position_embedding_.forward(position)));
+    for (auto& block : blocks_) hidden = block.forward(hidden);
+    return language_head_.forward(final_norm_.forward(hidden.back()));
+}
+
 std::vector<Scalar> TransformerModel::parameters() {
     std::vector<Scalar> result;
     append_parameters(result, token_embedding_.parameters());
