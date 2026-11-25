@@ -12,6 +12,7 @@ add_library(flawd_engine
     engine/src/nn.cpp
     engine/src/transformer.cpp
     engine/src/trainer.cpp
+    engine/src/tokenizer.cpp
 )
 target_include_directories(flawd_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/engine/include)
 
