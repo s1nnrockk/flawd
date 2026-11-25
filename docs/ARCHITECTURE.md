@@ -13,13 +13,12 @@ local training and inference are reliable.
 - Layers: Linear, Embedding, LayerNorm, ReLU, Tanh, and Sequential.
 - Losses: mean squared error and numerically stable log-sum-exp cross entropy.
 - Optimizers: SGD and Adam.
-- Transformer: token and position embeddings, causal single-head self-attention,
+- Transformer: token and position embeddings, causal multi-head self-attention,
   pre-normalized residual blocks, feed-forward layers, and vocabulary projection.
 - Checkpoints: versioned binary weights with model-configuration and size checks.
 - Trainer: next-token prediction using cross entropy and Adam.
 
-The current Transformer is a small single-head baseline. It is not yet a
-multi-head production architecture.
+The current Transformer supports configurable multi-head causal attention. It remains a small experimental baseline, not a production-scale architecture.
 
 ## Python data pipeline
 
