@@ -16,6 +16,12 @@ int main() {
     near(y.value(), 15.0F, "scalar expression value failed");
     near(x.grad(), 8.0F, "scalar gradient failed");
 
+    flawd::Scalar positive(4.0F);
+    const auto root = flawd::sqrt(positive);
+    root.backward();
+    near(root.value(), 2.0F, "sqrt value failed");
+    near(positive.grad(), 0.25F, "sqrt gradient failed");
+
     const flawd::ScalarVector logits{flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)};
     const auto classification_loss = flawd::cross_entropy_loss(logits, 2);
     expect(classification_loss.value() > 0.0F, "cross entropy loss must be positive");
