@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 from .dataset import read_jsonl
-from .tokenizer import ByteTokenizer
+from .tokenizer import ByteBPETokenizer, ByteTokenizer
 
 _MAGIC = b"FLAWDTOK"
 _VERSION = 2
@@ -45,9 +45,21 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
             mask[start_byte:end_byte] = b"\x01" * (end_byte - start_byte)
         cursor = content_end
 
-    body = tokenizer.encode(text)
-    ids = [tokenizer.BOS_ID, *body, tokenizer.EOS_ID]
-    flags = [0, *mask, int(final_role == "<|assistant|>\n")]
+    encoded_text = text.encode("utf-8")
+    body_ids: list[int] = []
+    body_flags: list[int] = []
+    cursor = 0
+    while cursor < len(encoded_text):
+        segment_flag = mask[cursor]
+        end = cursor + 1
+        while end < len(encoded_text) and mask[end] == segment_flag:
+            end += 1
+        segment_ids = tokenizer.encode_bytes(encoded_text[cursor:end])
+        body_ids.extend(segment_ids)
+        body_flags.extend([int(segment_flag)] * len(segment_ids))
+        cursor = end
+    ids = [tokenizer.BOS_ID, *body_ids, tokenizer.EOS_ID]
+    flags = [0, *body_flags, int(final_role == "<|assistant|>\\n")]
     return ids, flags
 
 
@@ -58,8 +70,9 @@ def tokenize_jsonl(
     source_description: str | None = None,
     license_id: str | None = None,
     language: str | None = None,
+    tokenizer_path: str | Path | None = None,
 ) -> dict[str, int]:
-    tokenizer = ByteTokenizer()
+    tokenizer = ByteBPETokenizer.load(tokenizer_path) if tokenizer_path else ByteTokenizer()
     output_path = Path(destination)
     source_path = Path(source).resolve()
     if output_path.resolve() == source_path:
@@ -100,7 +113,7 @@ def tokenize_jsonl(
     manifest = {
         "format": "FLAWDTOK",
         "version": _VERSION,
-        "tokenizer": "utf8-byte-bos-eos-v2",
+        "tokenizer": tokenizer.NAME,
         "loss_mask": "assistant-content-only-for-role-tagged-records; all-text-for-plain-records",
         "vocabulary_size": tokenizer.VOCAB_SIZE,
         "records": record_count,
