@@ -12,9 +12,9 @@ class DatasetTests(unittest.TestCase):
             source = Path(directory) / "raw.jsonl"
             output = Path(directory) / "clean.jsonl"
             source.write_text(
-                json.dumps({"text": "  hello   world  "}) + "\\n"
-                + json.dumps({"text": "hello world"}) + "\\n"
-                + json.dumps({"text": "Привет"}) + "\\n",
+                json.dumps({"text": "  hello   world  "}) + "\n"
+                + json.dumps({"text": "hello world"}) + "\n"
+                + json.dumps({"text": "Привет"}) + "\n",
                 encoding="utf-8",
             )
             stats = build_clean_dataset(source, output)
@@ -28,7 +28,7 @@ class DatasetTests(unittest.TestCase):
     def test_rejects_invalid_record(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "bad.jsonl"
-            source.write_text('{"prompt":"missing text"}\\n', encoding="utf-8")
+            source.write_text('{"prompt":"missing text"}\n', encoding="utf-8")
             with self.assertRaises(ValueError):
                 list(read_jsonl(source))
 
