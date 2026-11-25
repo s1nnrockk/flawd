@@ -55,6 +55,7 @@ class TransformerModel {
 public:
     explicit TransformerModel(ModelConfig config);
     Sequence forward(const std::vector<std::size_t>& token_ids);
+    ScalarVector forward_last(const std::vector<std::size_t>& token_ids);
     std::vector<Scalar> parameters();
     const ModelConfig& config() const noexcept;
     void save_checkpoint(const std::string& path);
