@@ -68,12 +68,13 @@ class CorpusTests(unittest.TestCase):
             tokenizer.save(tokenizer_path)
             tokenize_jsonl(source, output, tokenizer_path=tokenizer_path)
             payload = output.read_bytes()
-            magic, version, vocab, count = struct.unpack("<8sIIQ", payload[:24])
+            magic, version, vocab, count, fingerprint = struct.unpack("<8sIIQQ", payload[:32])
             self.assertEqual(magic, b"FLAWDTOK")
-            self.assertEqual(version, 2)
+            self.assertEqual(version, 3)
             self.assertEqual(vocab, tokenizer.VOCAB_SIZE)
+            self.assertEqual(fingerprint, tokenizer.fingerprint)
             self.assertLess(count, len("hello hello hello".encode("utf-8")) + 2)
-            records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
+            records = [struct.unpack("<HB", payload[32 + i * 3:35 + i * 3]) for i in range(count)]
             self.assertEqual(tokenizer.decode([item[0] for item in records]), "hello hello hello")
             manifest = json.loads(output.with_suffix(".tokens.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["tokenizer"], tokenizer.NAME)
@@ -95,9 +96,11 @@ class CorpusTests(unittest.TestCase):
             tokenizer.save(tokenizer_path)
             tokenize_jsonl(source, output, tokenizer_path=tokenizer_path)
             payload = output.read_bytes()
-            _, _, vocab, count = struct.unpack("<8sIIQ", payload[:24])
+            _, version, vocab, count, fingerprint = struct.unpack("<8sIIQQ", payload[:32])
+            self.assertEqual(version, 3)
             self.assertEqual(vocab, tokenizer.VOCAB_SIZE)
-            records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
+            self.assertEqual(fingerprint, tokenizer.fingerprint)
+            records = [struct.unpack("<HB", payload[32 + i * 3:35 + i * 3]) for i in range(count)]
             self.assertEqual(tokenizer.decode([item[0] for item in records]), serialized)
             pieces = [tokenizer.decode_bytes([item[0]]) for item in records[1:-1]]
             flags = [item[1] for item in records[1:-1]]
