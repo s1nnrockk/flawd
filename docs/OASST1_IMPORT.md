@@ -44,7 +44,7 @@ These are useful supervised instruction sources, not a complete pretraining corp
 Do not start a month-long run just because the download works. Start a short baseline only after:
 1. The importer completes and produces non-empty train and validation files.
 2. The report shows meaningful Russian and English coverage and no train/validation duplicates.
-3. The tokenizer is fitted on training data only and reused unchanged for validation.
+3. The tokenizer is fitted on a deterministic 100 KB sample from training data only (768-token target vocabulary) and reused unchanged for validation.
 4. A short run saves and reloads a checkpoint, and validation loss is finite.
 5. The trainer supports periodic checkpoints and resume without losing optimizer state.
 
