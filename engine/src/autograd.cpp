@@ -60,8 +60,8 @@ Scalar operator*(const Scalar& a, const Scalar& b) {
     n->data = a.value() * b.value();
     n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [n, x, y] {
-        x->gradient += y->data * n->gradient;
+    n->backward = [self = n.get(), x, y] {
+        x->gradient += y->data * self->gradient;
         y->gradient += x->data * n->gradient;
     };
     return Scalar(n);
