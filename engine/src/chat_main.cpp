@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
         config.embedding_size = 8;
         config.feed_forward_size = 16;
         config.layer_count = 1;
+        config.attention_heads = 2;
         config.seed = 2026;
 
         flawd::TransformerModel model(config);
