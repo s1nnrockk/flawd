@@ -48,7 +48,8 @@ def main() -> int:
         tokenize_jsonl(validation_jsonl, validation_tokens, tokenizer_path=tokenizer_path)
 
         training = subprocess.run(
-            [str(train_exe), str(train_tokens), str(checkpoint), "1", str(validation_tokens)],
+            [str(train_exe), str(train_tokens), str(checkpoint), "1", str(validation_tokens),
+             "-", "64", "16", "32", "2", "4"],
             check=True, capture_output=True, text=True, timeout=120,
         )
         if "FLAWD training complete" not in training.stdout or not checkpoint.is_file():
@@ -64,7 +65,21 @@ def main() -> int:
                 "Native BPE inference failed.\n"
                 + chat.stdout + "\n" + chat.stderr
             )
-        print("Python BPE export -> C++ training -> C++ inference passed.")
+        wrong_merges = list(tokenizer.merges)
+        replacement_pair = next(
+            pair for pair in ((0, 0), (1, 1), (2, 2), (3, 3))
+            if pair not in wrong_merges[:-1]
+        )
+        wrong_merges[-1] = replacement_pair
+        wrong_tokenizer_path = directory / "wrong-tokenizer.bpe"
+        ByteBPETokenizer(wrong_merges).save(wrong_tokenizer_path)
+        mismatch = subprocess.run(
+            [str(chat_exe), str(checkpoint), "0", "40", str(wrong_tokenizer_path)],
+            input="hello\\n\\n", capture_output=True, text=True, timeout=30,
+        )
+        if mismatch.returncode == 0 or "does not match the checkpoint tokenizer" not in mismatch.stderr:
+            raise RuntimeError("Native chat accepted a different BPE merge table with the same vocabulary size")
+        print("Python BPE export -> C++ training -> multi-turn inference and tokenizer validation passed.")
     return 0
 
 
