@@ -5,6 +5,7 @@ Install the optional dependency with: pip install -e ".[datasets]"
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from collections import defaultdict
@@ -158,6 +159,8 @@ def main() -> int:
     parser.add_argument("--languages", default="ru,en", help="Comma-separated language codes (default: ru,en)")
     parser.add_argument("--seed-jsonl", help="Optional curated FLAWD JSONL to append to training only")
     parser.add_argument("--dataset", default=DATASET_ID, help="Hugging Face dataset ID")
+    parser.add_argument("--include-dolly", action="store_true", help="Add the human-written Databricks Dolly 15k corpus")
+    parser.add_argument("--dolly-dataset", default="databricks/databricks-dolly-15k")
     args = parser.parse_args()
 
     try:
@@ -177,6 +180,43 @@ def main() -> int:
     train_rows, train_stats = convert_split(dataset["train"], languages, "train")
     validation_rows, validation_stats = convert_split(dataset["validation"], languages, "validation")
 
+    dolly_stats = {"enabled": False, "train_records": 0, "validation_records": 0}
+    if args.include_dolly:
+        dolly = load_dataset(args.dolly_dataset, split="train")
+        for row in dolly:
+            instruction = str(row.get("instruction") or "").strip()
+            response = str(row.get("response") or "").strip()
+            context = str(row.get("context") or "").strip()
+            if not instruction or not response:
+                continue
+            user_content = instruction
+            if context:
+                user_content += "\n\nReference context:\n" + context
+            messages = [
+                {"role": "user", "content": user_content},
+                {"role": "assistant", "content": response},
+            ]
+            try:
+                format_conversation(messages)
+            except ValueError:
+                continue
+            fingerprint = hashlib.sha256(
+                (instruction + "\0" + context + "\0" + response).encode("utf-8")
+            ).hexdigest()
+            record = {
+                "messages": messages,
+                "source": args.dolly_dataset,
+                "license": "CC-BY-SA-3.0",
+                "category": str(row.get("category") or "unknown"),
+            }
+            # Stable 95/5 split prevents exact record leakage.
+            if int(fingerprint[:8], 16) % 20 == 0:
+                validation_rows.append(record)
+                dolly_stats["validation_records"] += 1
+            else:
+                train_rows.append(record)
+                dolly_stats["train_records"] += 1
+
     if args.seed_jsonl:
         from .dataset import read_jsonl
         seed_records = list(read_jsonl(args.seed_jsonl))
@@ -195,6 +235,7 @@ def main() -> int:
         "languages": sorted(languages),
         "train": train_stats,
         "validation": validation_stats,
+        "dolly": dolly_stats,
         "curated_seed_records_added_to_train": len(seed_records) if args.seed_jsonl else 0,
         "outputs": {"train": str(train_path), "validation": str(validation_path)},
     }
