@@ -51,7 +51,7 @@ class CorpusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "dataset.tokens.json"
             output = Path(directory) / "dataset.tokens"
-            original = json.dumps({"text": "keep this source"}) + "\\n"
+            original = json.dumps({"text": "keep this source"}) + "\n"
             source.write_text(original, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "manifest paths"):
                 tokenize_jsonl(source, output)
