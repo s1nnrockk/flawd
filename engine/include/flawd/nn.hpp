@@ -99,6 +99,16 @@ private:
     float learning_rate_;
 };
 
+struct AdamState {
+    float learning_rate = 0.001F;
+    float beta1 = 0.9F;
+    float beta2 = 0.999F;
+    float epsilon = 1e-8F;
+    std::uint64_t step_count = 0;
+    std::vector<float> first_moment;
+    std::vector<float> second_moment;
+};
+
 class Adam {
 public:
     explicit Adam(std::vector<Scalar> parameters, float learning_rate = 0.001F,
@@ -107,6 +117,9 @@ public:
     void step();
     void set_learning_rate(float learning_rate);
     float learning_rate() const noexcept;
+    std::uint64_t step_count() const noexcept;
+    AdamState state() const;
+    void load_state(const AdamState& state);
 
 private:
     std::vector<Scalar> parameters_;
