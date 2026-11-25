@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
-from .dataset import build_clean_dataset, format_conversation
+from .dataset import format_conversation
 
 DATASET_ID = "OpenAssistant/oasst1"
 LANGUAGE_MAP = {"en": "en", "ru": "ru"}
