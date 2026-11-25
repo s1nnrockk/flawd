@@ -29,16 +29,20 @@ struct TokenCorpus {
     std::vector<std::uint8_t> loss_mask;
 };
 
-std::size_t parse_epochs(const char* argument) {
+std::size_t parse_positive_size(const char* argument, const char* label) {
     const std::string value(argument);
     if (value.empty() || value.front() == '-')
-        throw std::invalid_argument("Epoch count must be a positive integer");
+        throw std::invalid_argument(std::string(label) + " must be a positive integer");
     std::size_t consumed = 0;
     const auto parsed = std::stoull(value, &consumed);
     if (consumed != value.size() || parsed == 0 ||
         parsed > static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max()))
-        throw std::invalid_argument("Epoch count must be a positive integer");
+        throw std::invalid_argument(std::string(label) + " must be a positive integer");
     return static_cast<std::size_t>(parsed);
+}
+
+std::size_t parse_epochs(const char* argument) {
+    return parse_positive_size(argument, "Epoch count");
 }
 
 TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
@@ -113,12 +117,13 @@ int main(int argc, char** argv) {
 
         flawd::ModelConfig config;
         config.vocabulary_size = 259;
-        config.context_length = 64;
-        config.embedding_size = 8;
-        config.feed_forward_size = 16;
-        config.layer_count = 1;
-        config.attention_heads = 2;
+        config.context_length = argc >= 7 ? parse_positive_size(argv[6], "Context length") : 64;
+        config.embedding_size = argc >= 8 ? parse_positive_size(argv[7], "Embedding size") : 8;
+        config.feed_forward_size = argc >= 9 ? parse_positive_size(argv[8], "Feed-forward size") : 16;
+        config.layer_count = argc >= 10 ? parse_positive_size(argv[9], "Layer count") : 1;
+        config.attention_heads = argc >= 11 ? parse_positive_size(argv[10], "Attention head count") : 2;
         config.seed = 2026;
+        config.validate();
 
         auto training = load_tokens(argv[1], config.vocabulary_size);
         TokenCorpus validation;
