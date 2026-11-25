@@ -16,6 +16,12 @@ int main() {
     near(y.value(), 15.0F, "scalar expression value failed");
     near(x.grad(), 8.0F, "scalar gradient failed");
 
+    const flawd::ScalarVector logits{flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)};
+    const auto classification_loss = flawd::cross_entropy_loss(logits, 2);
+    expect(classification_loss.value() > 0.0F, "cross entropy loss must be positive");
+    classification_loss.backward();
+    expect(logits[2].grad() < 0.0F, "cross entropy target gradient must be negative");
+
     flawd::LayerNorm normalization(3);
     const auto normalized = normalization.forward({flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)});
     const float normalized_sum = normalized[0].value() + normalized[1].value() + normalized[2].value();
