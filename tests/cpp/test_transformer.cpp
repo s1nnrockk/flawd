@@ -41,6 +41,14 @@ int main() {
     const auto original_weight = model.parameters().front().value();
     const std::string checkpoint_path = "flawd_test_checkpoint.bin";
     model.save_checkpoint(checkpoint_path);
+    const auto checkpoint_config = flawd::TransformerModel::read_checkpoint_config(checkpoint_path);
+    if (checkpoint_config.vocabulary_size != config.vocabulary_size ||
+        checkpoint_config.context_length != config.context_length ||
+        checkpoint_config.embedding_size != config.embedding_size ||
+        checkpoint_config.feed_forward_size != config.feed_forward_size ||
+        checkpoint_config.layer_count != config.layer_count ||
+        checkpoint_config.attention_heads != config.attention_heads)
+        throw std::runtime_error("Checkpoint configuration reader returned incorrect dimensions");
     auto mutable_parameters = model.parameters();
     mutable_parameters.front().set_value(original_weight + 1.0F);
     model.load_checkpoint(checkpoint_path);
