@@ -13,6 +13,8 @@ namespace {
 std::size_t sample_next_token(const flawd::ScalarVector& logits, float temperature,
                               std::size_t top_k, std::mt19937& random) {
     if (logits.empty()) throw std::runtime_error("Model returned an empty vocabulary distribution");
+    for (const auto& logit : logits)
+        if (!std::isfinite(logit.value())) throw std::runtime_error("Model returned non-finite logits");
     if (temperature <= 0.0F) {
         const auto best = std::max_element(logits.begin(), logits.end(),
             [](const flawd::Scalar& left, const flawd::Scalar& right) {
