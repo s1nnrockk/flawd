@@ -210,6 +210,12 @@ void Adam::zero_grad() noexcept {
     for (auto& parameter : parameters_) parameter.zero_grad();
 }
 void Adam::step() {
+    if (step_count_ == std::numeric_limits<std::size_t>::max())
+        throw std::overflow_error("Adam optimizer step counter overflow");
+    for (const auto& parameter : parameters_) {
+        if (!std::isfinite(parameter.value()) || !std::isfinite(parameter.grad()))
+            throw std::runtime_error("Adam received a non-finite parameter or gradient");
+    }
     ++step_count_;
     const float correction1 = 1.0F - std::pow(beta1_, static_cast<float>(step_count_));
     const float correction2 = 1.0F - std::pow(beta2_, static_cast<float>(step_count_));
@@ -221,7 +227,11 @@ void Adam::step() {
         const float corrected_second = second_moment_[i] / correction2;
         const float update = learning_rate_ * corrected_first /
             (std::sqrt(corrected_second) + epsilon_);
-        parameters_[i].set_value(parameters_[i].value() - update);
+        const float updated_value = parameters_[i].value() - update;
+        if (!std::isfinite(update) || !std::isfinite(updated_value) ||
+            !std::isfinite(first_moment_[i]) || !std::isfinite(second_moment_[i]))
+            throw std::runtime_error("Adam update produced a non-finite value");
+        parameters_[i].set_value(updated_value);
     }
 }
 void Adam::set_learning_rate(float learning_rate) {
