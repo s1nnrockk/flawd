@@ -263,6 +263,32 @@ std::vector<Scalar> TransformerModel::parameters() {
 
 const ModelConfig& TransformerModel::config() const noexcept { return config_; }
 
+ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) throw std::runtime_error("Unable to open checkpoint for reading");
+    const auto read = [&](auto& value) {
+        input.read(reinterpret_cast<char*>(&value), sizeof(value));
+        if (!input) throw std::runtime_error("Checkpoint header is truncated or unreadable");
+    };
+    std::array<char, 8> magic{};
+    input.read(magic.data(), static_cast<std::streamsize>(magic.size()));
+    const std::array<char, 8> expected{{'F','L','A','W','D','C','K','P'}};
+    if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
+    std::uint32_t version = 0;
+    read(version);
+    if (version != 2) throw std::runtime_error("Unsupported FLAWD checkpoint version");
+    ModelConfig stored;
+    read(stored.vocabulary_size);
+    read(stored.context_length);
+    read(stored.embedding_size);
+    read(stored.feed_forward_size);
+    read(stored.layer_count);
+    read(stored.attention_heads);
+    read(stored.seed);
+    stored.validate();
+    return stored;
+}
+
 void TransformerModel::save_checkpoint(const std::string& path) {
     std::ofstream output(path, std::ios::binary);
     if (!output) throw std::runtime_error("Unable to open checkpoint for writing");
