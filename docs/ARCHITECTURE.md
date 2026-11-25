@@ -1,47 +1,59 @@
 # FLAWD architecture
 
-FLAWD is built in layers, with the model runtime preceding any public website or
-subscription system. The current implementation is a small educational and
-experimental foundation, not yet a complete language model.
+FLAWD is built from an original, inspectable C++ model runtime and Python data
+tools. The hosted website and account system are deliberately postponed until
+local training and inference are reliable.
 
-## C++ runtime
+## Current C++ implementation
 
-- Tensor: contiguous float storage, shape validation, elementwise operations,
-  matrix multiplication, transpose, ReLU, and stable softmax.
-- Scalar autograd: reverse-mode differentiation over a computation graph.
-- Neural layers: Linear, Embedding, ReLU, Tanh, LayerNorm, and Sequential.
-- Optimization: mean-squared-error loss and stochastic gradient descent.
+- Tensor: contiguous float storage, shape validation, arithmetic, matrix multiply,
+  transpose, ReLU, and stable softmax.
+- Autograd: reverse-mode scalar computation graph with addition, subtraction,
+  multiplication, division, tanh, ReLU, exp, sqrt, and log.
+- Layers: Linear, Embedding, LayerNorm, ReLU, Tanh, and Sequential.
+- Losses: mean squared error and numerically stable log-sum-exp cross entropy.
+- Optimizers: SGD and Adam.
+- Transformer: token and position embeddings, causal single-head self-attention,
+  pre-normalized residual blocks, feed-forward layers, and vocabulary projection.
+- Checkpoints: versioned binary weights with model-configuration and size checks.
+- Trainer: next-token prediction using cross entropy and Adam.
 
-## Python utilities
+The current Transformer is a small single-head baseline. It is not yet a
+multi-head production architecture.
 
-- ByteTokenizer: lossless UTF-8 byte encoding with reserved PAD, BOS, and EOS IDs.
-- Dataset pipeline: JSONL validation, whitespace normalization, exact deduplication.
-- Dataset CLI: converts a raw JSONL file into a cleaned JSONL file.
+## Python data pipeline
 
-## Planned language-model path
+- ByteTokenizer: UTF-8 byte IDs 0–255 and reserved PAD/BOS/EOS IDs.
+- Dataset tools: JSONL validation, whitespace normalization, exact deduplication.
+- Corpus export: writes the FLAWDTOK binary stream consumed by the C++ trainer.
+- The token file header is little-endian: 8-byte magic, uint32 version, uint32
+  vocabulary size, uint64 token count, then uint16 token IDs.
 
-1. Token IDs are converted to token embeddings.
-2. Positional information is added to token representations.
-3. Transformer blocks apply normalization, causal self-attention, and feed-forward layers.
-4. A vocabulary projection produces next-token logits.
-5. Softmax and cross-entropy provide the training objective.
-6. The training loop updates parameters and writes checkpoints.
-7. The inference runtime generates tokens from trained checkpoints.
+## Training flow
+
+1. Prepare text as UTF-8 JSONL with documented data rights.
+2. Validate, normalize, and deduplicate the corpus.
+3. Convert records into the FLAWDTOK token-stream format.
+4. Configure the compact Transformer and initialize its weights.
+5. Train next-token predictions with cross entropy and Adam.
+6. Save a versioned model checkpoint.
+7. Add a separate inference/generation runtime and evaluate on held-out data.
 
 ## Engineering constraints
 
-- Keep the first implementation dependency-light.
-- Validate shapes, token IDs, and dataset records at module boundaries.
-- Avoid graph ownership cycles in autograd.
-- Keep datasets and checkpoints outside Git unless intentionally publishing small samples.
-- Record dataset provenance and usage permissions.
-- Measure memory and throughput before implementing more complex acceleration.
+- Keep the baseline dependency-light.
+- Validate tensor shapes, token IDs, and dataset records.
+- Avoid ownership cycles in autograd graphs.
+- Keep large datasets and checkpoints outside Git.
+- Track dataset provenance and usage permissions.
+- Measure memory and speed before adding GPU support or larger model sizes.
+- Do not describe a tiny experimental model as comparable to frontier hosted models.
 
-## Delivery order
+## Next milestones
 
-1. Numerical engine and tests.
-2. Autograd and neural-network primitives.
-3. Transformer architecture and model configuration.
-4. Training, checkpointing, and evaluation.
-5. Local inference.
-6. Hosted API and website.
+1. Finish checkpoint and trainer validation.
+2. Implement inference sampling and checkpoint loading in a chat-like CLI.
+3. Add multi-head attention, causal masks, and stronger Transformer tests.
+4. Add validation splits, training metrics, and reproducible data manifests.
+5. Improve tokenizer and batching; profile memory and speed.
+6. Only then consider a hosted API and website.
