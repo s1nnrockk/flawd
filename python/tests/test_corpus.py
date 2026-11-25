@@ -14,7 +14,7 @@ class CorpusTests(unittest.TestCase):
             source = Path(directory) / "data.jsonl"
             output = Path(directory) / "data.tokens"
             source.write_text(json.dumps({"text": "Hi"}) + "\n", encoding="utf-8")
-            stats = tokenize_jsonl(source, output)
+            stats = tokenize_jsonl(source, output, source_description="Test corpus", license_id="CC0-1.0", language="en")
             self.assertEqual(stats, {"records": 1, "tokens": 3})
             payload = output.read_bytes()
             magic, version, vocab, count = struct.unpack("<8sIIQ", payload[:24])
@@ -24,7 +24,7 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(count, 3)
             token_ids = struct.unpack("<3H", payload[24:])
             self.assertEqual(list(token_ids), [72, 105, ByteTokenizer.EOS_ID])
-            self.assertTrue(output.with_suffix(".tokens.json").exists())
+            manifest = json.loads(output.with_suffix(".tokens.json").read_text(encoding="utf-8"))\n            self.assertEqual(manifest["source_description"], "Test corpus")\n            self.assertEqual(manifest["license"], "CC0-1.0")\n            self.assertEqual(manifest["language"], "en")
 
 
 if __name__ == "__main__":
