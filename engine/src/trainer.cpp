@@ -27,8 +27,16 @@ float LanguageModelTrainer::train_step(const std::vector<std::size_t>& input_tok
 
 TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_stream,
                                           std::size_t epochs, std::size_t stride) {
+    return train(token_stream, std::vector<std::uint8_t>(token_stream.size(), 1), epochs, stride);
+}
+
+TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_stream,
+                                          const std::vector<std::uint8_t>& loss_mask,
+                                          std::size_t epochs, std::size_t stride) {
     if (token_stream.size() < 2)
         throw std::invalid_argument("Training token stream must contain at least two tokens");
+    if (loss_mask.size() != token_stream.size())
+        throw std::invalid_argument("Training loss mask size must match token stream");
     if (epochs == 0 || stride == 0)
         throw std::invalid_argument("Epoch count and stride must be non-zero");
     for (const auto token : token_stream)
@@ -39,6 +47,7 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
     double total_loss = 0.0;
     for (std::size_t epoch = 0; epoch < epochs; ++epoch) {
         for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
+            if (loss_mask[target_index] == 0) continue;
             const std::size_t start = target_index > model_.config().context_length
                 ? target_index - model_.config().context_length : 0;
             std::vector<std::size_t> context(
@@ -48,14 +57,24 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
             ++stats.steps;
         }
     }
+    if (stats.steps == 0)
+        throw std::invalid_argument("Training loss mask selects no next-token targets");
     stats.average_loss = total_loss / static_cast<double>(stats.steps);
     return stats;
 }
 
 TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& token_stream,
                                                std::size_t stride) {
+    return evaluate(token_stream, std::vector<std::uint8_t>(token_stream.size(), 1), stride);
+}
+
+TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& token_stream,
+                                               const std::vector<std::uint8_t>& loss_mask,
+                                               std::size_t stride) {
     if (token_stream.size() < 2)
         throw std::invalid_argument("Evaluation token stream must contain at least two tokens");
+    if (loss_mask.size() != token_stream.size())
+        throw std::invalid_argument("Evaluation loss mask size must match token stream");
     if (stride == 0) throw std::invalid_argument("Evaluation stride must be non-zero");
     for (const auto token : token_stream)
         if (token >= model_.config().vocabulary_size)
@@ -64,6 +83,7 @@ TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& tok
     TrainingStats stats;
     double total_loss = 0.0;
     for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
+        if (loss_mask[target_index] == 0) continue;
         const std::size_t start = target_index > model_.config().context_length
             ? target_index - model_.config().context_length : 0;
         const std::vector<std::size_t> context(
@@ -73,6 +93,8 @@ TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& tok
         total_loss += cross_entropy_loss(logits, token_stream[target_index]).value();
         ++stats.steps;
     }
+    if (stats.steps == 0)
+        throw std::invalid_argument("Evaluation loss mask selects no next-token targets");
     stats.average_loss = total_loss / static_cast<double>(stats.steps);
     return stats;
 }
