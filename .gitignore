@@ -19,3 +19,12 @@ venv/
 *.suo
 .DS_Store
 Thumbs.db
+
+# Training data and model artifacts
+/data/raw/
+/data/processed/
+*.tokens
+*.tokens.json
+*.flawd
+*.ckpt
+*.weights
