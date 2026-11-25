@@ -22,6 +22,9 @@ else()
 endif()
 
 add_executable(flawd_demo engine/src/main.cpp)
+
+add_executable(flawd_train engine/src/train_main.cpp)
+target_link_libraries(flawd_train PRIVATE flawd_engine)
 target_link_libraries(flawd_demo PRIVATE flawd_engine)
 
 include(CTest)
