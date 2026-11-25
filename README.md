@@ -1,80 +1,79 @@
 # FLAWD
 
 **FLAWD** is an independent language-model project built with C++ and Python.
-The long-term goal is to train an original model, run inference locally, and
-build a hosted API and website only after the model runtime is dependable.
+The goal is to train an original model, run inference locally, and build a hosted
+API and website only after the model runtime is dependable.
 
-## Current foundation
+## Implemented foundation
 
 ### C++ engine
-- Contiguous tensor storage and validated tensor shapes.
-- Elementwise add, subtract, multiply, scaling, and ReLU.
-- 2D matrix multiplication and transpose.
-- Numerically stable tensor softmax.
-- Scalar reverse-mode automatic differentiation.
-- Trainable Linear and Embedding layers.
-- ReLU, Tanh, LayerNorm, vector softmax, and Sequential.
-- Mean-squared-error loss and SGD optimizer.
-- CTest unit tests.
+- Tensor storage, shape validation, elementwise math, matrix multiplication, transpose, ReLU, and stable softmax.
+- Reverse-mode scalar automatic differentiation.
+- Linear and token Embedding layers.
+- ReLU, Tanh, LayerNorm, Sequential, and differentiable vector softmax.
+- Numerically stable log-sum-exp cross-entropy and MSE.
+- SGD and Adam optimizers.
+- Causal self-attention, Transformer blocks, and a compact byte-level Transformer model.
+- Model checkpoint save/load with version and configuration validation.
+- Next-token training loop and standalone `flawd_train` executable.
 
 ### Python tools
-- Lossless UTF-8 byte tokenizer with reserved special-token IDs.
-- JSONL dataset validation, whitespace normalization, and exact deduplication.
-- Dataset-cleaning command line tool.
-- Python unit tests.
+- Lossless UTF-8 byte tokenizer (IDs 0–255; PAD/BOS/EOS reserved).
+- JSONL validation, whitespace normalization, and exact deduplication.
+- Export from cleaned JSONL into the shared binary `.tokens` format.
+- Unit tests for tokenizer, datasets, and token-file format.
 
-### Automation
-- GitHub Actions builds the C++ project and runs C++ and Python tests on Windows.
+### Automated checks
+GitHub Actions builds the C++ targets and runs CTest and Python unit tests on Windows.
 
-## Repository layout
+## Quick start: prepare a tiny training corpus
 
-- engine/ — C++ numerical engine, autograd, and neural-network layers.
-- python/flawd/ — tokenizer and dataset utilities.
-- python/tests/ — Python unit tests.
-- tests/cpp/ — C++ unit tests.
-- data/ — dataset format documentation.
-- docs/ — architecture and engineering notes.
-- .github/workflows/ — CI checks.
+Create a UTF-8 JSONL file with one text record per line:
 
-## Build and test
+```json
+{"text":"The first short training passage."}
+{"text":"A second passage for the tiny experiment."}
+```
 
-Requirements: CMake 3.20+ and a C++17 compiler.
+Clean and tokenize it:
+
+```powershell
+cd python
+python -m flawd.dataset_cli raw.jsonl clean.jsonl
+python -m flawd.corpus_cli clean.jsonl tiny.tokens
+cd ..
+```
+
+Build FLAWD:
 
 ```powershell
 cmake -S . -B build
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
-.\build\Release\flawd_demo.exe
 ```
 
-Python tests:
+Train a small model and save its checkpoint:
 
 ```powershell
-cd python
-python -m unittest discover -s tests -v
+.\build\Release\flawd_train.exe .\python\tiny.tokens .\model.flawd 1
 ```
 
-Clean a dataset:
+The initial configuration is intentionally tiny and CPU-oriented. It is a
+working experimental training path, not a ChatGPT/Claude-scale model. Useful
+language models require much larger licensed datasets, compute, and further
+engineering.
 
-```powershell
-cd python
-python -m flawd.dataset_cli input.jsonl clean.jsonl
-```
+## Repository layout
 
-## Development sequence
-
-1. Finish and verify the numerical and autograd foundations.
-2. Complete Transformer primitives and model configuration.
-3. Implement a small Transformer language model.
-4. Add batching, training loops, checkpointing, and evaluation.
-5. Add local text generation and performance work.
-6. Build the hosted API, accounts, and website.
-
-The initial implementation is intentionally small. Training a useful large
-language model requires large, well-documented datasets and substantial compute;
-the project will measure its limits rather than claim otherwise.
+- engine/ — C++ tensor engine, autograd, neural layers, Transformer, trainer.
+- python/flawd/ — tokenizer and dataset/corpus utilities.
+- python/tests/ — Python unit tests.
+- tests/cpp/ — C++ unit tests.
+- data/ — dataset format notes.
+- docs/ — architecture notes.
+- .github/workflows/ — CI.
 
 ## Data and security
 
-Training data must have documented sources and usage permissions. Never commit
+Use datasets with documented sources and usage permissions. Never commit
 private datasets, personal data, passwords, private keys, or API secrets.
