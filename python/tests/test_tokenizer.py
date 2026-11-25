@@ -40,6 +40,10 @@ class ByteTokenizerTests(unittest.TestCase):
             text = "abc abd — тест"
             self.assertEqual(loaded.decode(loaded.encode(text)), text)
 
+    def test_bpe_rejects_empty_training_data(self):
+        with self.assertRaisesRegex(ValueError, "no text bytes"):
+            ByteBPETokenizer.train([], vocab_size=270)
+
     def test_bpe_rejects_corrupt_vocabulary(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "broken.bpe"
