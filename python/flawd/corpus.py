@@ -45,7 +45,7 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
 
     body = tokenizer.encode(text)
     ids = [tokenizer.BOS_ID, *body, tokenizer.EOS_ID]
-    flags = [0, *mask, int(final_role == "<|assistant|>\\n")]
+    flags = [0, *mask, int(final_role == "<|assistant|>\n")]
     return ids, flags
 
 
