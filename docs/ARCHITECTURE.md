@@ -13,6 +13,7 @@ local training and inference are reliable.
 - Versioned checkpoints with model-configuration and size validation.
 - Autoregressive local inference with temperature and top-k sampling.
 - Next-token training and held-out evaluation, both supporting per-token loss masks.
+- Averaged gradient accumulation across multiple supervised targets, with correct handling of incomplete final groups.
 
 ## Assistant training objective
 
@@ -40,6 +41,7 @@ training duration, and rigorous evaluation.
 ## Engineering constraints
 
 - Keep the baseline dependency-light and CPU-friendly.
+- Accumulate gradients over four supervised targets per optimizer update in the CLI, averaging partial final groups correctly.
 - Evaluate held-out validation loss after every epoch, retain the best checkpoint, and stop after three epochs without meaningful improvement.
 - Validate tensor shapes, token IDs, masks, and dataset records.
 - Keep large datasets and checkpoints outside Git.
