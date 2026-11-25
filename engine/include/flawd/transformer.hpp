@@ -17,6 +17,7 @@ struct ModelConfig {
     std::size_t embedding_size = 32;
     std::size_t feed_forward_size = 64;
     std::size_t layer_count = 2;
+    std::size_t attention_heads = 2;
     std::uint32_t seed = 2026;
 
     void validate() const;
@@ -24,22 +25,24 @@ struct ModelConfig {
 
 class CausalSelfAttention {
 public:
-    CausalSelfAttention(std::size_t embedding_size, std::uint32_t seed = 1);
+    CausalSelfAttention(std::size_t embedding_size, std::size_t head_count, std::uint32_t seed = 1);
     Sequence forward(const Sequence& input);
     std::vector<Scalar> parameters();
 
 private:
     std::size_t embedding_size_;
-    Linear query_;
-    Linear key_;
-    Linear value_;
+    std::size_t head_count_;
+    std::size_t head_size_;
+    std::vector<Linear> queries_;
+    std::vector<Linear> keys_;
+    std::vector<Linear> values_;
     Linear output_;
 };
 
 class TransformerBlock {
 public:
     TransformerBlock(std::size_t embedding_size, std::size_t feed_forward_size,
-                     std::uint32_t seed = 1);
+                     std::size_t attention_heads, std::uint32_t seed = 1);
     Sequence forward(const Sequence& input);
     std::vector<Scalar> parameters();
 
