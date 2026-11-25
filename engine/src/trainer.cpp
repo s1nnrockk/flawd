@@ -46,19 +46,22 @@ float LanguageModelTrainer::train_step(const std::vector<std::size_t>& input_tok
 }
 
 TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_stream,
-                                          std::size_t epochs, std::size_t stride) {
-    return train(token_stream, std::vector<std::uint8_t>(token_stream.size(), 1), epochs, stride);
+                                          std::size_t epochs, std::size_t stride,
+                                          std::size_t gradient_accumulation) {
+    return train(token_stream, std::vector<std::uint8_t>(token_stream.size(), 1),
+                 epochs, stride, gradient_accumulation);
 }
 
 TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_stream,
                                           const std::vector<std::uint8_t>& loss_mask,
-                                          std::size_t epochs, std::size_t stride) {
+                                          std::size_t epochs, std::size_t stride,
+                                          std::size_t gradient_accumulation) {
     if (token_stream.size() < 2)
         throw std::invalid_argument("Training token stream must contain at least two tokens");
     if (loss_mask.size() != token_stream.size())
         throw std::invalid_argument("Training loss mask size must match token stream");
-    if (epochs == 0 || stride == 0)
-        throw std::invalid_argument("Epoch count and stride must be non-zero");
+    if (epochs == 0 || stride == 0 || gradient_accumulation == 0)
+        throw std::invalid_argument("Epoch count, stride, and gradient accumulation must be non-zero");
     for (const auto token : token_stream)
         if (token >= model_.config().vocabulary_size)
             throw std::out_of_range("Training stream contains a token outside the vocabulary");
@@ -67,18 +70,39 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
 
     TrainingStats stats;
     double total_loss = 0.0;
+    auto model_parameters = model_.parameters();
+    std::size_t accumulated = 0;
     for (std::size_t epoch = 0; epoch < epochs; ++epoch) {
         for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
             if (loss_mask[target_index] == 0) continue;
+            if (accumulated == 0) optimizer_.zero_grad();
             const std::size_t start = context_start(token_stream, target_index,
                                                     model_.config().context_length,
                                                     model_.config().vocabulary_size);
             std::vector<std::size_t> context(
                 token_stream.begin() + static_cast<std::ptrdiff_t>(start),
                 token_stream.begin() + static_cast<std::ptrdiff_t>(target_index));
-            total_loss += train_step(context, token_stream[target_index]);
+            const auto logits = model_.forward_last(context);
+            const auto loss = cross_entropy_loss(logits, token_stream[target_index]);
+            total_loss += loss.value();
+            loss.backward();
+            ++accumulated;
             ++stats.steps;
+
+            if (accumulated == gradient_accumulation) {
+                const float scale = 1.0F / static_cast<float>(accumulated);
+                for (auto& parameter : model_parameters) parameter.scale_grad(scale);
+                optimizer_.step();
+                ++steps_;
+                accumulated = 0;
+            }
         }
+    }
+    if (accumulated > 0) {
+        const float scale = 1.0F / static_cast<float>(accumulated);
+        for (auto& parameter : model_parameters) parameter.scale_grad(scale);
+        optimizer_.step();
+        ++steps_;
     }
     if (stats.steps == 0)
         throw std::invalid_argument("Training loss mask selects no next-token targets");
