@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << stats.steps << "\n"
                   << "Training loss: " << stats.average_loss << "\n";
-        if (argc == 5) {
+        if (argc >= 5) {
             std::cout << "Validation steps: " << validation_stats.steps << "\n"
                       << "Validation loss: " << validation_stats.average_loss << "\n";
         }
