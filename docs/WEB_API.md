@@ -23,3 +23,13 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/search -ContentTyp
 ```
 
 The API is a local retrieval backend, not an authenticated public service. Do not expose it directly to the internet. Retrieved web content remains untrusted and does not automatically modify model weights.
+
+## Ask the local model with live web context
+
+After building the native engine and training a checkpoint, run:
+
+```powershell
+python -m flawd.assistant_cli "What changed in Python 3.13?" --model ..\build\Release\model.flawd --chat ..\build\Release\flawd_chat.exe --tokenizer tokenizer.bpe
+```
+
+The command searches the web, indexes fetched pages, places short source excerpts into the model prompt, runs local inference, and prints source links. With `--offline`, it uses only the local SQLite index. This is a first retrieval-augmented generation (RAG) bridge; the small experimental model may still produce weak answers, and the current context window limits how much source text it can use.
