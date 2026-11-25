@@ -12,7 +12,7 @@ _HEADER = struct.Struct("<8sIIQ")
 _TOKEN = struct.Struct("<H")
 
 
-def tokenize_jsonl(source: str | Path, destination: str | Path) -> dict[str, int]:
+def tokenize_jsonl(\n    source: str | Path,\n    destination: str | Path,\n    *,\n    source_description: str | None = None,\n    license_id: str | None = None,\n    language: str | None = None,\n) -> dict[str, int]:
     tokenizer = ByteTokenizer()
     output_path = Path(destination)
     output_path.parent.mkdir(parents=True, exist_ok=True)
