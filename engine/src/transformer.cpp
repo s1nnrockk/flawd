@@ -111,7 +111,10 @@ Sequence TransformerBlock::forward(const Sequence& input) {
     output.reserve(residual.size());
     for (const auto& token : residual) {
         const auto normalized_token = feed_forward_norm_.forward(token);
-        const auto hidden = flawd::relu(feed_forward_in_.forward(normalized_token));
+        const auto pre_activation = feed_forward_in_.forward(normalized_token);
+        ScalarVector hidden;
+        hidden.reserve(pre_activation.size());
+        for (const auto& value : pre_activation) hidden.push_back(flawd::relu(value));
         const auto projected = feed_forward_out_.forward(hidden);
         output.push_back(add_vectors(token, projected));
     }
