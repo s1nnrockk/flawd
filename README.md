@@ -21,7 +21,8 @@ API and website only after the model runtime is dependable.
 ### Python tools
 - Lossless UTF-8 byte tokenizer (IDs 0–255; PAD/BOS/EOS reserved).
 - JSONL validation, whitespace normalization, and exact deduplication.
-- Export from cleaned JSONL into the shared binary `.tokens` format.
+- Export from cleaned JSONL into the versioned binary `.tokens` format, with assistant-only loss masking for role-tagged conversations.
+- The trainer uses system/user messages as context and scores assistant content only; plain text corpora retain ordinary next-token training.
 - Unit tests for tokenizer, datasets, and token-file format.
 
 ### Automated checks
