@@ -26,6 +26,7 @@ Integer read_little_endian(std::istream& input) {
 
 struct TokenCorpus {
     std::size_t vocabulary_size = 0;
+    std::uint64_t tokenizer_fingerprint = 0;
     std::vector<std::size_t> tokens;
     std::vector<std::uint8_t> loss_mask;
 };
@@ -56,34 +57,38 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     const auto version = read_little_endian<std::uint32_t>(input);
     const auto vocabulary = read_little_endian<std::uint32_t>(input);
     const auto count = read_little_endian<std::uint64_t>(input);
-    if (version != 1 && version != 2) throw std::runtime_error("Unsupported token file version");
+    if (version != 1 && version != 2 && version != 3) throw std::runtime_error("Unsupported token file version");
     if (vocabulary < 259 || vocabulary > 65536)
         throw std::runtime_error("Token file vocabulary must be between 259 and 65536");
     if (expected_vocab != 0 && vocabulary != expected_vocab)
         throw std::runtime_error("Token file vocabulary does not match model");
+    const std::uint64_t tokenizer_fingerprint = version == 3
+        ? read_little_endian<std::uint64_t>(input) : 0;
+    const std::uint64_t header_size = version == 3 ? 32 : 24;
     if (count < 2) throw std::runtime_error("Token file must contain at least two tokens");
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
-    const std::uint64_t bytes_per_token = version == 2 ? 3 : 2;
-    if (count > (std::numeric_limits<std::uint64_t>::max() - 24) / bytes_per_token)
+    const std::uint64_t bytes_per_token = version >= 2 ? 3 : 2;
+    if (count > (std::numeric_limits<std::uint64_t>::max() - header_size) / bytes_per_token)
         throw std::runtime_error("Token file payload size overflows the file format");
-    const std::uint64_t expected_size = 24 + count * bytes_per_token;
+    const std::uint64_t expected_size = header_size + count * bytes_per_token;
     input.seekg(0, std::ios::end);
     const auto actual_size = static_cast<std::streamoff>(input.tellg());
     if (actual_size < 0 || static_cast<std::uint64_t>(actual_size) != expected_size)
         throw std::runtime_error("Token file size does not match its header");
-    input.seekg(24, std::ios::beg);
+    input.seekg(static_cast<std::streamoff>(header_size), std::ios::beg);
     if (!input) throw std::runtime_error("Cannot seek to token payload");
 
     TokenCorpus corpus;
     corpus.vocabulary_size = vocabulary;
+    corpus.tokenizer_fingerprint = tokenizer_fingerprint;
     corpus.tokens.reserve(static_cast<std::size_t>(count));
     corpus.loss_mask.reserve(static_cast<std::size_t>(count));
     std::size_t supervised = 0;
     bool inside_record = false;
     for (std::uint64_t i = 0; i < count; ++i) {
         const auto token = read_little_endian<std::uint16_t>(input);
-        std::uint8_t flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
+        std::uint8_t flag = version >= 2 ? read_little_endian<std::uint8_t>(input) : 1;
         if (version == 1 && token == 257) flag = 0;
         if (token >= vocabulary) throw std::runtime_error("Token ID is outside the vocabulary");
         if (flag > 1) throw std::runtime_error("Token loss mask must be 0 or 1");
@@ -123,6 +128,7 @@ int main(int argc, char** argv) {
         auto training = load_tokens(argv[1], 0);
         flawd::ModelConfig config;
         config.vocabulary_size = training.vocabulary_size;
+        config.tokenizer_fingerprint = training.tokenizer_fingerprint;
         config.context_length = argc >= 7 ? parse_positive_size(argv[6], "Context length") : 64;
         config.embedding_size = argc >= 8 ? parse_positive_size(argv[7], "Embedding size") : 8;
         config.feed_forward_size = argc >= 9 ? parse_positive_size(argv[8], "Feed-forward size") : 16;
@@ -138,6 +144,8 @@ int main(int argc, char** argv) {
             if (std::filesystem::equivalent(argv[1], argv[4], path_error) && !path_error)
                 throw std::invalid_argument("Training and validation files must be different");
             validation = load_tokens(argv[4], config.vocabulary_size);
+            if (validation.tokenizer_fingerprint != training.tokenizer_fingerprint)
+                throw std::invalid_argument("Training and validation tokenizer fingerprints do not match");
             if (training.tokens == validation.tokens &&
                 training.loss_mask == validation.loss_mask)
                 throw std::invalid_argument("Training and validation corpora contain identical data");
