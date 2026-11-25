@@ -16,6 +16,14 @@ int main() {
     near(y.value(), 15.0F, "scalar expression value failed");
     near(x.grad(), 8.0F, "scalar gradient failed");
 
+    flawd::LayerNorm normalization(3);
+    const auto normalized = normalization.forward({flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)});
+    const float normalized_sum = normalized[0].value() + normalized[1].value() + normalized[2].value();
+    near(normalized_sum, 0.0F, "layer normalization mean failed");
+    const auto class_probabilities = flawd::softmax({flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)});
+    near(class_probabilities[0].value() + class_probabilities[1].value() + class_probabilities[2].value(),
+         1.0F, "vector softmax normalization failed");
+
     flawd::Embedding embedding(16, 4, 9);
     const auto embedded = embedding.forward(3);
     expect(embedded.size() == 4, "embedding dimension mismatch");
