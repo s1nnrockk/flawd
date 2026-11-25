@@ -81,8 +81,8 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
             throw std::runtime_error("PAD tokens are not valid in an unpadded training corpus");
         if (token == 257) {
             if (inside_record) throw std::runtime_error("Nested BOS marker in token corpus");
-            if (i == 0 && flag != 0)
-                throw std::runtime_error("The initial BOS token cannot be a supervised target");
+            if (flag != 0)
+                throw std::runtime_error("BOS tokens cannot be supervised targets");
             inside_record = true;
         } else if (token == 258) {
             if (!inside_record) throw std::runtime_error("EOS marker appears outside a record");
