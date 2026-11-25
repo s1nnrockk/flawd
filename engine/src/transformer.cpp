@@ -319,7 +319,7 @@ ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
     if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
     std::uint32_t version = 0;
     read(version);
-    if (version != 2 && version != 3)
+    if (version != 2 && version != 3 && version != 4)
         throw std::runtime_error("Unsupported FLAWD checkpoint version");
     ModelConfig stored;
     read(stored.vocabulary_size);
@@ -334,7 +334,7 @@ ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
     return stored;
 }
 
-void TransformerModel::save_checkpoint(const std::string& path) {
+void TransformerModel::save_checkpoint(const std::string& path, const Adam* optimizer) {
     const std::filesystem::path destination(path);
     std::filesystem::path temporary = destination;
     temporary += ".tmp";
@@ -342,7 +342,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output) throw std::runtime_error("Unable to open temporary checkpoint for writing");
         const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
-        const std::uint32_t version = 3;
+        const std::uint32_t version = 4;
         const auto write = [&](const auto& value) {
             output.write(reinterpret_cast<const char*>(&value), sizeof(value));
         };
@@ -365,6 +365,30 @@ void TransformerModel::save_checkpoint(const std::string& path) {
                 throw std::runtime_error("Cannot save checkpoint with non-finite model weights");
             write(value);
         }
+        const std::uint8_t has_optimizer_state = optimizer ? 1 : 0;
+        write(has_optimizer_state);
+        if (optimizer) {
+            const auto state = optimizer->state();
+            write(state.learning_rate);
+            write(state.beta1);
+            write(state.beta2);
+            write(state.epsilon);
+            write(state.step_count);
+            const std::uint64_t moment_count =
+                static_cast<std::uint64_t>(state.first_moment.size());
+            if (state.first_moment.size() != state.second_moment.size() ||
+                state.first_moment.size() != model_parameters.size())
+                throw std::runtime_error("Adam state does not match model parameter count");
+            write(moment_count);
+            for (std::size_t index = 0; index < state.first_moment.size(); ++index) {
+                if (!std::isfinite(state.first_moment[index]) ||
+                    !std::isfinite(state.second_moment[index]) ||
+                    state.second_moment[index] < 0.0F)
+                    throw std::runtime_error("Cannot save checkpoint with invalid Adam moments");
+                write(state.first_moment[index]);
+                write(state.second_moment[index]);
+            }
+        }
         output.flush();
         if (!output) throw std::runtime_error("Failed while writing model checkpoint");
         output.close();
@@ -377,7 +401,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
     }
 }
 
-void TransformerModel::load_checkpoint(const std::string& path) {
+void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer) {
     std::ifstream input(path, std::ios::binary);
     if (!input) throw std::runtime_error("Unable to open checkpoint for reading");
     const auto read = [&](auto& value) {
@@ -426,6 +450,42 @@ void TransformerModel::load_checkpoint(const std::string& path) {
     }
     char trailing = 0;
     if (input.read(&trailing, 1)) throw std::runtime_error("Checkpoint contains unexpected trailing data");
+    AdamState optimizer_state;
+    bool has_optimizer_state = false;
+    if (version >= 4) {
+        std::uint8_t has_state = 0;
+        read(has_state);
+        if (has_state > 1) throw std::runtime_error("Checkpoint optimizer-state flag is invalid");
+        has_optimizer_state = has_state == 1;
+        if (has_optimizer_state) {
+            read(optimizer_state.learning_rate);
+            read(optimizer_state.beta1);
+            read(optimizer_state.beta2);
+            read(optimizer_state.epsilon);
+            read(optimizer_state.step_count);
+            std::uint64_t moment_count = 0;
+            read(moment_count);
+            if (moment_count != count ||
+                moment_count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
+                throw std::runtime_error("Checkpoint Adam moment count does not match model parameters");
+            optimizer_state.first_moment.reserve(static_cast<std::size_t>(moment_count));
+            optimizer_state.second_moment.reserve(static_cast<std::size_t>(moment_count));
+            for (std::size_t index = 0; index < static_cast<std::size_t>(moment_count); ++index) {
+                float first = 0.0F;
+                float second = 0.0F;
+                read(first);
+                read(second);
+                if (!std::isfinite(first) || !std::isfinite(second) || second < 0.0F)
+                    throw std::runtime_error("Checkpoint contains invalid Adam moments");
+                optimizer_state.first_moment.push_back(first);
+                optimizer_state.second_moment.push_back(second);
+            }
+        }
+    }
+    char trailing = 0;
+    if (input.read(&trailing, 1))
+        throw std::runtime_error("Checkpoint contains unexpected trailing data");
+    if (has_optimizer_state && optimizer) optimizer->load_state(optimizer_state);
     for (std::size_t i = 0; i < model_parameters.size(); ++i)
         model_parameters[i].set_value(values[i]);
 }
