@@ -23,11 +23,19 @@ _RESERVED = re.compile(r"<\|(system|user|assistant)\|>")
 def _label_value(labels: Any, name: str) -> float | None:
     """Read a label score from either the nested dataset dict or Arrow's column form."""
     try:
-        value = labels.get(name) if isinstance(labels, dict) else None
-        if isinstance(value, dict):
-            value = value.get("value")
-        elif isinstance(value, list):
-            value = value[0] if value else None
+        value = None
+        if isinstance(labels, dict) and isinstance(labels.get("name"), list):
+            names = labels.get("name", [])
+            values = labels.get("value", [])
+            if name in names:
+                index = names.index(name)
+                value = values[index] if index < len(values) else None
+        elif isinstance(labels, dict):
+            value = labels.get(name)
+            if isinstance(value, dict):
+                value = value.get("value")
+            elif isinstance(value, list):
+                value = value[0] if value else None
         return float(value) if value is not None else None
     except (TypeError, ValueError):
         return None
@@ -145,6 +153,43 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], 
     }
 
 
+def _record_key(record: dict[str, Any]) -> str:
+    try:
+        if isinstance(record.get("messages"), list):
+            payload = format_conversation(record["messages"])
+        else:
+            payload = str(record.get("text") or "")
+    except ValueError:
+        payload = json.dumps(record, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _deduplicate_splits(
+    train: list[dict[str, Any]], validation: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
+    # Validation takes precedence so an identical sample can never leak into training.
+    unique_validation: list[dict[str, Any]] = []
+    validation_keys: set[str] = set()
+    for record in validation:
+        key = _record_key(record)
+        if key not in validation_keys:
+            validation_keys.add(key)
+            unique_validation.append(record)
+
+    unique_train: list[dict[str, Any]] = []
+    train_keys: set[str] = set()
+    for record in train:
+        key = _record_key(record)
+        if key not in validation_keys and key not in train_keys:
+            train_keys.add(key)
+            unique_train.append(record)
+
+    return unique_train, unique_validation, {
+        "train_duplicates_removed": len(train) - len(unique_train),
+        "validation_duplicates_removed": len(validation) - len(unique_validation),
+    }
+
+
 def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="\n") as stream:
@@ -222,6 +267,8 @@ def main() -> int:
         seed_records = list(read_jsonl(args.seed_jsonl))
         train_rows.extend(seed_records)
 
+    train_rows, validation_rows, dedupe_stats = _deduplicate_splits(train_rows, validation_rows)
+
     train_path = Path(args.train_output)
     validation_path = Path(args.validation_output)
     if train_path.resolve() == validation_path.resolve():
@@ -236,6 +283,7 @@ def main() -> int:
         "train": train_stats,
         "validation": validation_stats,
         "dolly": dolly_stats,
+        "deduplication": dedupe_stats,
         "curated_seed_records_added_to_train": len(seed_records) if args.seed_jsonl else 0,
         "outputs": {"train": str(train_path), "validation": str(validation_path)},
     }
