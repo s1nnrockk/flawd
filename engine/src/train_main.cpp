@@ -167,6 +167,14 @@ int main(int argc, char** argv) {
         double best_validation_loss = std::numeric_limits<double>::infinity();
         flawd::TrainingStats best_validation_stats;
 
+        if (argc >= 5) {
+            best_validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
+            best_validation_loss = best_validation_stats.average_loss;
+            trainer.save_checkpoint(argv[2]);
+            std::cout << "Starting validation loss: " << best_validation_loss
+                      << " | current checkpoint preserved\\n";
+        }
+
         constexpr std::size_t gradient_accumulation = 4;
         for (std::size_t epoch = 1; epoch <= epochs; ++epoch) {
             const auto epoch_stats = trainer.train(training.tokens, training.loss_mask, 1, 1,
