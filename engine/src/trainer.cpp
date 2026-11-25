@@ -152,6 +152,13 @@ TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& tok
 void LanguageModelTrainer::set_learning_rate(float learning_rate) {
     optimizer_.set_learning_rate(learning_rate);
 }
+void LanguageModelTrainer::save_checkpoint(const std::string& path) {
+    model_.save_checkpoint(path, &optimizer_);
+}
+void LanguageModelTrainer::load_checkpoint(const std::string& path) {
+    model_.load_checkpoint(path, &optimizer_);
+    steps_ = static_cast<std::size_t>(optimizer_.step_count());
+}
 std::size_t LanguageModelTrainer::steps() const noexcept { return steps_; }
 
 } // namespace flawd
