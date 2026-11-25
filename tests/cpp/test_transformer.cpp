@@ -13,6 +13,7 @@ int main() {
     config.embedding_size = 8;
     config.feed_forward_size = 16;
     config.layer_count = 2;
+    config.attention_heads = 2;
     flawd::TransformerModel model(config);
 
     const auto first = model.forward({10, 20});
