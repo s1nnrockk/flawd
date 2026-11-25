@@ -56,6 +56,6 @@ cmake --build build --config Release
 .\scripts\train-resumable.ps1 -TrainTokens .\python\training-run\train.tokens -Hours 720 -CheckpointPath .\model.flawd
 ~~~
 
-The script runs one epoch per process, writes the checkpoint after every completed epoch, and starts the next chunk by restoring model weights and Adam state. It intentionally does not claim validation-based early stopping: it is a resumability/checkpoint safety tool, not a quality guarantee. Stop it with Ctrl+C; only completed epochs are guaranteed to have been saved. Change model dimensions only when creating a new run, not when resuming an existing checkpoint.
+The script runs one epoch per process, writes the checkpoint after every completed epoch, and starts the next chunk by restoring model weights and Adam state. Each chunk reports elapsed time and supervised targets per second so the real training speed can be measured on the target PC. It intentionally does not claim validation-based early stopping: it is a resumability/checkpoint safety tool, not a quality guarantee. Stop it with Ctrl+C; only completed epochs are guaranteed to have been saved. Change model dimensions only when creating a new run, not when resuming an existing checkpoint.
 
 The current C++ trainer is a small from-scratch model with slow token-by-token updates. More hours do not make it comparable to Claude. First measure tokens/second and validation behavior on the target PC; then choose a realistic training duration. The GitHub Actions runners are for CI, not month-long persistent training.
