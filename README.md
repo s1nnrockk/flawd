@@ -16,6 +16,7 @@ API and website only after the model runtime is dependable.
 - Causal self-attention, Transformer blocks, and a compact byte-level Transformer model.
 - Model checkpoint save/load with version and configuration validation.
 - Next-token training loop and standalone `flawd_train` executable.
+- Local checkpoint loading and greedy text-generation CLI (`flawd_chat`).
 
 ### Python tools
 - Lossless UTF-8 byte tokenizer (IDs 0–255; PAD/BOS/EOS reserved).
@@ -58,10 +59,16 @@ Train a small model and save its checkpoint:
 .\build\Release\flawd_train.exe .\python\tiny.tokens .\model.flawd 1
 ```
 
-The initial configuration is intentionally tiny and CPU-oriented. It is a
-working experimental training path, not a ChatGPT/Claude-scale model. Useful
-language models require much larger licensed datasets, compute, and further
-engineering.
+The initial configuration is intentionally tiny and CPU-oriented. After training,
+start the local text-generation CLI:
+
+```powershell
+.\\build\\Release\\flawd_chat.exe .\\model.flawd
+```
+
+It accepts a prompt in the terminal. The model is an experimental byte-level
+baseline, not a ChatGPT/Claude-scale model. Useful language models require much
+larger licensed datasets, compute, and further engineering.
 
 ## Repository layout
 
