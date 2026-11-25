@@ -27,6 +27,7 @@ class CausalSelfAttention {
 public:
     CausalSelfAttention(std::size_t embedding_size, std::size_t head_count, std::uint32_t seed = 1);
     Sequence forward(const Sequence& input);
+    ScalarVector forward_last(const Sequence& input);
     std::vector<Scalar> parameters();
 
 private:
@@ -44,6 +45,7 @@ public:
     TransformerBlock(std::size_t embedding_size, std::size_t feed_forward_size,
                      std::size_t attention_heads, std::uint32_t seed = 1);
     Sequence forward(const Sequence& input);
+    ScalarVector forward_last(const Sequence& input);
     std::vector<Scalar> parameters();
 
 private:
