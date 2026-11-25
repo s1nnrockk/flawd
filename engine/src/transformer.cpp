@@ -54,37 +54,38 @@ CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::size_t
 Sequence CausalSelfAttention::forward(const Sequence& input) {
     validate_sequence(input, embedding_size_);
     const std::size_t length = input.size();
+    std::vector<Sequence> queries(head_count_), keys(head_count_), values(head_count_);
+    for (std::size_t head = 0; head < head_count_; ++head) {
+        queries[head].reserve(length);
+        keys[head].reserve(length);
+        values[head].reserve(length);
+        for (const auto& token : input) {
+            queries[head].push_back(queries_[head].forward(token));
+            keys[head].push_back(keys_[head].forward(token));
+            values[head].push_back(values_[head].forward(token));
+        }
+    }
+
     Sequence result;
     result.reserve(length);
     const float scale_factor = std::sqrt(static_cast<float>(head_size_));
-
     for (std::size_t query_index = 0; query_index < length; ++query_index) {
         ScalarVector concatenated;
         concatenated.reserve(embedding_size_);
         for (std::size_t head = 0; head < head_count_; ++head) {
-            Sequence keys;
-            Sequence values;
-            keys.reserve(query_index + 1);
-            values.reserve(query_index + 1);
-            const auto query = queries_[head].forward(input[query_index]);
-            for (std::size_t key_index = 0; key_index <= query_index; ++key_index) {
-                keys.push_back(keys_[head].forward(input[key_index]));
-                values.push_back(values_[head].forward(input[key_index]));
-            }
-
             ScalarVector scores;
             scores.reserve(query_index + 1);
             for (std::size_t key_index = 0; key_index <= query_index; ++key_index) {
                 Scalar score(0.0F);
                 for (std::size_t dimension = 0; dimension < head_size_; ++dimension)
-                    score = score + query[dimension] * keys[key_index][dimension];
+                    score = score + queries[head][query_index][dimension] * keys[head][key_index][dimension];
                 scores.push_back(score / Scalar(scale_factor));
             }
             const auto weights = softmax(scores);
             for (std::size_t dimension = 0; dimension < head_size_; ++dimension) {
                 Scalar weighted_sum(0.0F);
                 for (std::size_t key_index = 0; key_index <= query_index; ++key_index)
-                    weighted_sum = weighted_sum + weights[key_index] * values[key_index][dimension];
+                    weighted_sum = weighted_sum + weights[key_index] * values[head][key_index][dimension];
                 concatenated.push_back(weighted_sum);
             }
         }
