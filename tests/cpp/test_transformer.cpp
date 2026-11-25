@@ -17,6 +17,13 @@ int main() {
 
     const auto first = model.forward({10, 20});
     const auto changed_future = model.forward({10, 21});
+    const auto last_logits = model.forward_last({10, 20});
+    if (last_logits.size() != config.vocabulary_size)
+        throw std::runtime_error("forward_last output shape mismatch");
+    for (std::size_t i = 0; i < config.vocabulary_size; ++i) {
+        if (std::fabs(last_logits[i].value() - first.back()[i].value()) > 1e-5F)
+            throw std::runtime_error("forward_last differs from the final full-sequence logits");
+    }
     if (first.size() != 2 || first[0].size() != config.vocabulary_size)
         throw std::runtime_error("Transformer output shape mismatch");
     for (std::size_t i = 0; i < config.vocabulary_size; ++i) {
