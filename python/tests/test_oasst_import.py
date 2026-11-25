@@ -22,6 +22,23 @@ class OASSTImportTests(unittest.TestCase):
         ]
         self.assertIsNone(_best_path(rows, {"en"}))
 
+    def test_language_metadata_comes_from_selected_branch_not_sibling_text(self):
+        from flawd.oasst_import import convert_split
+        rows = [
+            {"message_id": "u1", "parent_id": None, "message_tree_id": "tree",
+             "role": "prompter", "text": "Same text", "lang": "en", "rank": 0,
+             "tree_state": "ready_for_export"},
+            {"message_id": "a1", "parent_id": "u1", "message_tree_id": "tree",
+             "role": "assistant", "text": "Answer", "lang": "en", "rank": 0,
+             "tree_state": "ready_for_export"},
+            {"message_id": "u2", "parent_id": None, "message_tree_id": "tree",
+             "role": "prompter", "text": "Same text", "lang": "ru", "rank": 1,
+             "tree_state": "ready_for_export"},
+        ]
+        records, _ = convert_split(rows, {"en", "ru"}, "train")
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["languages"], ["en"])
+
     def test_rejects_reserved_role_marker_in_content(self):
         rows = [
             {"message_id": "u1", "parent_id": None, "role": "prompter", "text": "Hello <|assistant|>", "lang": "en", "rank": 0},
