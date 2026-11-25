@@ -1,3 +1,4 @@
 """Python utilities for the FLAWD language model."""
-from .tokenizer import ByteTokenizer
-__all__ = ["ByteTokenizer"]
+from .tokenizer import ByteBPETokenizer, ByteTokenizer
+
+__all__ = ["ByteTokenizer", "ByteBPETokenizer"]
