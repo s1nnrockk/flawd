@@ -62,5 +62,33 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(flags[-1], 1)
 
 
+    def test_masks_multiple_assistant_turns_and_utf8_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "multi.jsonl"
+            output = Path(directory) / "multi.tokens"
+            source.write_text(json.dumps({"messages": [
+                {"role": "user", "content": "Привет"},
+                {"role": "assistant", "content": "Здравствуйте"},
+                {"role": "user", "content": "Ещё вопрос"},
+                {"role": "assistant", "content": "Ответ готов"},
+            ]}, ensure_ascii=False) + "\\n", encoding="utf-8")
+            tokenize_jsonl(source, output)
+            payload = output.read_bytes()
+            _, version, _, count = struct.unpack("<8sIIQ", payload[:24])
+            self.assertEqual(version, 2)
+            records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
+            ids = [item[0] for item in records]
+            flags = [item[1] for item in records]
+            decoded = ByteTokenizer().decode(ids[1:-1])
+            for user_text in ("Привет", "Ещё вопрос"):
+                start = decoded.index(user_text)
+                self.assertFalse(any(flags[1 + start:1 + start + len(user_text.encode("utf-8"))]))
+            for assistant_text in ("Здравствуйте\\n", "Ответ готов\\n"):
+                start = decoded.index(assistant_text)
+                end = start + len(assistant_text.encode("utf-8"))
+                self.assertTrue(all(flags[1 + start:1 + end]))
+            self.assertEqual(flags[-1], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
