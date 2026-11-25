@@ -5,11 +5,35 @@ import re
 from pathlib import Path
 from typing import Iterator
 
+_ROLE_PATTERN = re.compile(r"<\\|(system|user|assistant)\\|>\\n")
+
 
 def normalize_text(text: str) -> str:
     if not isinstance(text, str):
         raise TypeError("dataset text must be a string")
-    return re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"\\s+", " ", text).strip()
+
+
+def validate_serialized_conversation(text: str) -> None:
+    """Validate serialized role markers and reject malformed/injected turns."""
+    matches = list(_ROLE_PATTERN.finditer(text))
+    if not matches or matches[0].start() != 0:
+        raise ValueError("conversation must start with a role marker")
+    roles = [match.group(1) for match in matches]
+    if roles[0] == "system":
+        if roles.count("system") != 1 or len(roles) < 3:
+            raise ValueError("system message is allowed only once at the beginning")
+        roles = roles[1:]
+    if not roles or roles[0] != "user" or roles[-1] != "assistant":
+        raise ValueError("conversation must start with user and end with assistant")
+    for index, role in enumerate(roles):
+        expected = "user" if index % 2 == 0 else "assistant"
+        if role != expected:
+            raise ValueError("conversation messages must alternate user and assistant")
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        if not text[match.end():end].strip():
+            raise ValueError("conversation messages must have non-empty content")
 
 
 def format_conversation(messages: list[dict[str, str]]) -> str:
@@ -17,8 +41,7 @@ def format_conversation(messages: list[dict[str, str]]) -> str:
     if not isinstance(messages, list) or not messages:
         raise ValueError("messages must be a non-empty list")
     parts: list[str] = []
-    has_user = False
-    has_assistant = False
+    roles: list[str] = []
     for index, message in enumerate(messages, start=1):
         if not isinstance(message, dict):
             raise ValueError(f"message {index} must be an object")
@@ -28,13 +51,16 @@ def format_conversation(messages: list[dict[str, str]]) -> str:
             raise ValueError(f"message {index} has an unsupported role")
         if not isinstance(content, str) or not content.strip():
             raise ValueError(f"message {index} content must be a non-empty string")
-        content = content.replace("\r\n", "\n").replace("\r", "\n").strip()
-        parts.append(f"<|{role}|>\n{content}\n")
-        has_user = has_user or role == "user"
-        has_assistant = has_assistant or role == "assistant"
-    if not has_user or not has_assistant:
-        raise ValueError("conversation must contain at least one user and one assistant message")
-    return "".join(parts)
+        if any(marker in content for marker in ("<|system|>", "<|user|>", "<|assistant|>")):
+            raise ValueError(f"message {index} contains a reserved role marker")
+        if role == "system" and (index != 1 or "system" in roles):
+            raise ValueError("system message is allowed only once at the beginning")
+        content = content.replace("\\r\\n", "\\n").replace("\\r", "\\n").strip()
+        parts.append(f"<|{role}|>\\n{content}\\n")
+        roles.append(role)
+    result = "".join(parts)
+    validate_serialized_conversation(result)
+    return result
 
 
 def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
@@ -51,8 +77,12 @@ def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
                 raise ValueError(f"{file_path}:{line_number}: expected a JSON object")
             if isinstance(record.get("text"), str):
                 raw_text = record["text"]
-                normalized = raw_text.replace("\r\n", "\n").replace("\r", "\n").strip()
-                if normalized.startswith(("<|system|>\n", "<|user|>\n", "<|assistant|>\n")):
+                normalized = raw_text.replace("\\r\\n", "\\n").replace("\\r", "\\n").strip()
+                if normalized.startswith(("<|system|>\\n", "<|user|>\\n", "<|assistant|>\\n")):
+                    try:
+                        validate_serialized_conversation(normalized)
+                    except ValueError as exc:
+                        raise ValueError(f"{file_path}:{line_number}: {exc}") from exc
                     text = normalized
                 else:
                     text = normalize_text(raw_text)
@@ -92,9 +122,12 @@ def build_clean_dataset(
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     if validation_destination is None:
-        with destination_path.open("w", encoding="utf-8", newline="\n") as output:
+        source_path = Path(source).resolve()
+        if destination_path.resolve() == source_path:
+            raise ValueError("Source and output paths must be different")
+        with destination_path.open("w", encoding="utf-8", newline="\\n") as output:
             for text in records:
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
         return {
             "input_records": input_count,
             "output_records": len(records),
@@ -117,11 +150,11 @@ def build_clean_dataset(
     random.Random(seed).shuffle(indices)
     validation_indices = set(indices[:validation_count])
     validation_path.parent.mkdir(parents=True, exist_ok=True)
-    with destination_path.open("w", encoding="utf-8", newline="\n") as train_output:
-        with validation_path.open("w", encoding="utf-8", newline="\n") as validation_output:
+    with destination_path.open("w", encoding="utf-8", newline="\\n") as train_output:
+        with validation_path.open("w", encoding="utf-8", newline="\\n") as validation_output:
             for index, text in enumerate(records):
                 output = validation_output if index in validation_indices else train_output
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
 
     return {
         "input_records": input_count,
