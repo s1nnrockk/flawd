@@ -300,6 +300,13 @@ class KnowledgeStore:
                 tuple("%" + term + "%" for term in terms) + (max(1, min(limit, 20)),)).fetchall()
         return [{"title": r[0], "url": r[1], "text": r[2], "score": r[3]} for r in rows]
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+        return False
+
     def close(self):
         self.db.close()
 
