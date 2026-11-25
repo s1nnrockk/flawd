@@ -33,7 +33,7 @@ Default outputs:
 
 The importer groups OASST messages by conversation tree, follows one preferred ranked branch, rejects deleted/rejected/unsupported-language or malformed conversations, filters quality labels (spam, language mismatch, PII, inappropriate content, hate speech, sexual content, and failed-task flags), and keeps official validation trees separate. Dolly's held-out subset is also kept out of training. FLAWD's curated seed set is appended to training only.
 
-The importer writes source and license provenance into records. It does not copy datasets into Git. Re-check upstream dataset cards and license terms before redistributing a combined corpus.
+The importer writes source and license provenance into records. It does not copy datasets into Git. Re-check upstream dataset cards and license terms before redistributing a combined corpus. For a fully automated download, normalization, BPE fit, and token export, use **Actions → FLAWD corpus preparation → Run workflow**. It uploads a prepared corpus artifact and does not start model training.
 
 ## Quality and limitations
 
