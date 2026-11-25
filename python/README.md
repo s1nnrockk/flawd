@@ -48,11 +48,10 @@ python -m flawd.corpus_cli train.jsonl train.tokens
 python -m flawd.corpus_cli validation.jsonl validation.tokens
 ```
 
-The binary FLAWDTOK v2 stream uses a 24-byte little-endian header followed by
+The byte-tokenized FLAWDTOK v2 stream uses a 24-byte little-endian header followed by
 one uint16 token ID and one uint8 loss-mask flag per token. Version 1 files
 remain readable by the C++ trainer and are treated as unmasked text corpora.
-The JSON manifest records source provenance, token count, and supervised-token
-count. Train and validation corpora must remain separate.
+The BPE-tokenized FLAWDTOK v3 stream adds a 64-bit tokenizer fingerprint to its header so native training and inference can verify the exact merge table. The JSON manifest records tokenizer identity, source provenance, token count, and supervised-token count. Train and validation corpora must remain separate.
 
 ## Tokenizer
 
