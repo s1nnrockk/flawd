@@ -28,69 +28,86 @@ void append_parameters(std::vector<Scalar>& destination, std::vector<Scalar> sou
 
 void ModelConfig::validate() const {
     if (vocabulary_size < 2 || context_length == 0 || embedding_size == 0 ||
-        feed_forward_size == 0 || layer_count == 0)
+        feed_forward_size == 0 || layer_count == 0 || attention_heads == 0 ||
+        embedding_size % attention_heads != 0)
         throw std::invalid_argument("Transformer configuration dimensions must be positive");
 }
 
-CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::uint32_t seed)
-    : embedding_size_(embedding_size),
-      query_(embedding_size, embedding_size, seed),
-      key_(embedding_size, embedding_size, seed + 1),
-      value_(embedding_size, embedding_size, seed + 2),
-      output_(embedding_size, embedding_size, seed + 3) {
-    if (embedding_size == 0) throw std::invalid_argument("Attention embedding size must be non-zero");
+CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::size_t head_count,
+                                             std::uint32_t seed)
+    : embedding_size_(embedding_size), head_count_(head_count),
+      head_size_(head_count == 0 ? 0 : embedding_size / head_count),
+      output_(embedding_size, embedding_size, seed + 100) {
+    if (embedding_size == 0 || head_count == 0 || embedding_size % head_count != 0)
+        throw std::invalid_argument("Attention width must be divisible by a non-zero head count");
+    queries_.reserve(head_count_);
+    keys_.reserve(head_count_);
+    values_.reserve(head_count_);
+    for (std::size_t head = 0; head < head_count_; ++head) {
+        const auto head_seed = seed + static_cast<std::uint32_t>(head * 3);
+        queries_.emplace_back(embedding_size_, head_size_, head_seed);
+        keys_.emplace_back(embedding_size_, head_size_, head_seed + 1);
+        values_.emplace_back(embedding_size_, head_size_, head_seed + 2);
+    }
 }
 
 Sequence CausalSelfAttention::forward(const Sequence& input) {
     validate_sequence(input, embedding_size_);
     const std::size_t length = input.size();
-    Sequence queries, keys, values;
-    queries.reserve(length); keys.reserve(length); values.reserve(length);
-    for (const auto& token : input) {
-        queries.push_back(query_.forward(token));
-        keys.push_back(key_.forward(token));
-        values.push_back(value_.forward(token));
-    }
-
     Sequence result;
     result.reserve(length);
-    const float scale_factor = std::sqrt(static_cast<float>(embedding_size_));
+    const float scale_factor = std::sqrt(static_cast<float>(head_size_));
+
     for (std::size_t query_index = 0; query_index < length; ++query_index) {
-        ScalarVector scores;
-        scores.reserve(query_index + 1);
-        for (std::size_t key_index = 0; key_index <= query_index; ++key_index) {
-            Scalar score(0.0F);
-            for (std::size_t dimension = 0; dimension < embedding_size_; ++dimension)
-                score = score + queries[query_index][dimension] * keys[key_index][dimension];
-            scores.push_back(score / Scalar(scale_factor));
+        ScalarVector concatenated;
+        concatenated.reserve(embedding_size_);
+        for (std::size_t head = 0; head < head_count_; ++head) {
+            Sequence keys;
+            Sequence values;
+            keys.reserve(query_index + 1);
+            values.reserve(query_index + 1);
+            const auto query = queries_[head].forward(input[query_index]);
+            for (std::size_t key_index = 0; key_index <= query_index; ++key_index) {
+                keys.push_back(keys_[head].forward(input[key_index]));
+                values.push_back(values_[head].forward(input[key_index]));
+            }
+
+            ScalarVector scores;
+            scores.reserve(query_index + 1);
+            for (std::size_t key_index = 0; key_index <= query_index; ++key_index) {
+                Scalar score(0.0F);
+                for (std::size_t dimension = 0; dimension < head_size_; ++dimension)
+                    score = score + query[dimension] * keys[key_index][dimension];
+                scores.push_back(score / Scalar(scale_factor));
+            }
+            const auto weights = softmax(scores);
+            for (std::size_t dimension = 0; dimension < head_size_; ++dimension) {
+                Scalar weighted_sum(0.0F);
+                for (std::size_t key_index = 0; key_index <= query_index; ++key_index)
+                    weighted_sum = weighted_sum + weights[key_index] * values[key_index][dimension];
+                concatenated.push_back(weighted_sum);
+            }
         }
-        const auto weights = softmax(scores);
-        ScalarVector context;
-        context.reserve(embedding_size_);
-        for (std::size_t dimension = 0; dimension < embedding_size_; ++dimension) {
-            Scalar weighted_sum(0.0F);
-            for (std::size_t key_index = 0; key_index <= query_index; ++key_index)
-                weighted_sum = weighted_sum + weights[key_index] * values[key_index][dimension];
-            context.push_back(weighted_sum);
-        }
-        result.push_back(output_.forward(context));
+        result.push_back(output_.forward(concatenated));
     }
     return result;
 }
 
 std::vector<Scalar> CausalSelfAttention::parameters() {
     std::vector<Scalar> result;
-    append_parameters(result, query_.parameters());
-    append_parameters(result, key_.parameters());
-    append_parameters(result, value_.parameters());
+    for (std::size_t head = 0; head < head_count_; ++head) {
+        append_parameters(result, queries_[head].parameters());
+        append_parameters(result, keys_[head].parameters());
+        append_parameters(result, values_[head].parameters());
+    }
     append_parameters(result, output_.parameters());
     return result;
 }
 
 TransformerBlock::TransformerBlock(std::size_t embedding_size, std::size_t feed_forward_size,
-                                   std::uint32_t seed)
+                                   std::size_t attention_heads, std::uint32_t seed)
     : attention_norm_(embedding_size),
-      attention_(embedding_size, seed),
+      attention_(embedding_size, attention_heads, seed),
       feed_forward_norm_(embedding_size),
       feed_forward_in_(embedding_size, feed_forward_size, seed + 10),
       feed_forward_out_(feed_forward_size, embedding_size, seed + 11) {
@@ -144,6 +161,7 @@ TransformerModel::TransformerModel(ModelConfig config)
     blocks_.reserve(config_.layer_count);
     for (std::size_t i = 0; i < config_.layer_count; ++i)
         blocks_.emplace_back(config_.embedding_size, config_.feed_forward_size,
+                             config_.attention_heads,
                              config_.seed + static_cast<std::uint32_t>(1000 + i * 20));
 }
 
@@ -197,7 +215,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
     std::ofstream output(path, std::ios::binary);
     if (!output) throw std::runtime_error("Unable to open checkpoint for writing");
     const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
-    const std::uint32_t version = 1;
+    const std::uint32_t version = 2;
     const auto write = [&](const auto& value) {
         output.write(reinterpret_cast<const char*>(&value), sizeof(value));
     };
@@ -208,6 +226,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
     write(config_.embedding_size);
     write(config_.feed_forward_size);
     write(config_.layer_count);
+    write(config_.attention_heads);
     write(config_.seed);
     auto model_parameters = parameters();
     const std::uint64_t count = static_cast<std::uint64_t>(model_parameters.size());
@@ -232,7 +251,7 @@ void TransformerModel::load_checkpoint(const std::string& path) {
     if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
     std::uint32_t version = 0;
     read(version);
-    if (version != 1) throw std::runtime_error("Unsupported FLAWD checkpoint version");
+    if (version != 2) throw std::runtime_error("Unsupported FLAWD checkpoint version");
 
     ModelConfig stored;
     read(stored.vocabulary_size);
@@ -240,12 +259,14 @@ void TransformerModel::load_checkpoint(const std::string& path) {
     read(stored.embedding_size);
     read(stored.feed_forward_size);
     read(stored.layer_count);
+    read(stored.attention_heads);
     read(stored.seed);
     if (stored.vocabulary_size != config_.vocabulary_size ||
         stored.context_length != config_.context_length ||
         stored.embedding_size != config_.embedding_size ||
         stored.feed_forward_size != config_.feed_forward_size ||
-        stored.layer_count != config_.layer_count)
+        stored.layer_count != config_.layer_count ||
+        stored.attention_heads != config_.attention_heads)
         throw std::runtime_error("Checkpoint model configuration does not match this model");
 
     std::uint64_t count = 0;
