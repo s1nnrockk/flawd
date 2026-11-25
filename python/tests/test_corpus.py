@@ -83,7 +83,7 @@ class CorpusTests(unittest.TestCase):
             for user_text in ("Привет", "Ещё вопрос"):
                 start = decoded.index(user_text)
                 self.assertFalse(any(flags[1 + start:1 + start + len(user_text.encode("utf-8"))]))
-            for assistant_text in ("Здравствуйте\\n", "Ответ готов\\n"):
+            for assistant_text in ("Здравствуйте\n", "Ответ готов\n"):
                 start = decoded.index(assistant_text)
                 end = start + len(assistant_text.encode("utf-8"))
                 self.assertTrue(all(flags[1 + start:1 + end]))
