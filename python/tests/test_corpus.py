@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from flawd.corpus import tokenize_jsonl
-from flawd.tokenizer import ByteTokenizer
+from flawd.tokenizer import ByteBPETokenizer, ByteTokenizer
 
 
 class CorpusTests(unittest.TestCase):
@@ -57,6 +57,61 @@ class CorpusTests(unittest.TestCase):
                 tokenize_jsonl(source, output)
             self.assertFalse(output.exists())
             self.assertFalse(list(Path(directory).glob("data.tokens.*.tmp")))
+
+    def test_bpe_corpus_uses_trained_vocabulary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "data.jsonl"
+            tokenizer_path = Path(directory) / "tokenizer.bpe"
+            output = Path(directory) / "data.tokens"
+            source.write_text(json.dumps({"text": "hello hello hello"}) + "\n", encoding="utf-8")
+            tokenizer = ByteBPETokenizer.train(["hello hello hello"] * 5, vocab_size=280)
+            tokenizer.save(tokenizer_path)
+            tokenize_jsonl(source, output, tokenizer_path=tokenizer_path)
+            payload = output.read_bytes()
+            magic, version, vocab, count = struct.unpack("<8sIIQ", payload[:24])
+            self.assertEqual(magic, b"FLAWDTOK")
+            self.assertEqual(version, 2)
+            self.assertEqual(vocab, tokenizer.VOCAB_SIZE)
+            self.assertLess(count, len("hello hello hello".encode("utf-8")) + 2)
+            records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
+            self.assertEqual(tokenizer.decode([item[0] for item in records]), "hello hello hello")
+            manifest = json.loads(output.with_suffix(".tokens.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["tokenizer"], tokenizer.NAME)
+            self.assertEqual(manifest["vocabulary_size"], tokenizer.VOCAB_SIZE)
+
+    def test_bpe_conversation_mask_never_crosses_role_boundaries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "conversation.jsonl"
+            tokenizer_path = Path(directory) / "tokenizer.bpe"
+            output = Path(directory) / "conversation.tokens"
+            messages = [
+                {"role": "user", "content": "Привет, как дела?"},
+                {"role": "assistant", "content": "Всё хорошо, спасибо!"},
+            ]
+            serialized = "<|user|>\nПривет, как дела?\n<|assistant|>\nВсё хорошо, спасибо!\n"
+            source.write_text(json.dumps({"messages": messages}, ensure_ascii=False) + "\n",
+                              encoding="utf-8")
+            tokenizer = ByteBPETokenizer.train([serialized] * 8, vocab_size=320)
+            tokenizer.save(tokenizer_path)
+            tokenize_jsonl(source, output, tokenizer_path=tokenizer_path)
+            payload = output.read_bytes()
+            _, _, vocab, count = struct.unpack("<8sIIQ", payload[:24])
+            self.assertEqual(vocab, tokenizer.VOCAB_SIZE)
+            records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
+            self.assertEqual(tokenizer.decode([item[0] for item in records]), serialized)
+            pieces = [tokenizer.decode([item[0]]) for item in records[1:-1]]
+            flags = [item[1] for item in records[1:-1]]
+            decoded_offset = 0
+            for piece, flag in zip(pieces, flags):
+                expected = 1 if serialized[decoded_offset:].startswith("Всё хорошо") or (
+                    decoded_offset >= len(serialized[:serialized.index("Всё хорошо")].encode("utf-8"))
+                ) else 0
+                if decoded_offset < len(serialized[:serialized.index("Всё хорошо")].encode("utf-8")):
+                    self.assertEqual(flag, 0)
+                else:
+                    self.assertEqual(flag, 1)
+                decoded_offset += len(piece.encode("utf-8"))
+            self.assertEqual(records[-1][1], 1)
 
     def test_conversation_masks_only_assistant_content(self):
         with tempfile.TemporaryDirectory() as directory:
