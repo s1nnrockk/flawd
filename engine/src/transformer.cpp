@@ -6,6 +6,14 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <filesystem>
+#include <system_error>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace flawd {
 namespace {
@@ -23,6 +31,21 @@ ScalarVector add_vectors(const ScalarVector& left, const ScalarVector& right) {
 }
 void append_parameters(std::vector<Scalar>& destination, std::vector<Scalar> source) {
     destination.insert(destination.end(), source.begin(), source.end());
+}
+
+void replace_checkpoint_file(const std::filesystem::path& temporary,
+                             const std::filesystem::path& destination) {
+#ifdef _WIN32
+    if (!MoveFileExW(temporary.c_str(), destination.c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        throw std::system_error(static_cast<int>(GetLastError()), std::system_category(),
+                                "Unable to atomically replace model checkpoint");
+    }
+#else
+    std::error_code error;
+    std::filesystem::rename(temporary, destination, error);
+    if (error) throw std::system_error(error, "Unable to atomically replace model checkpoint");
+#endif
 }
 }
 
@@ -305,31 +328,46 @@ ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
 }
 
 void TransformerModel::save_checkpoint(const std::string& path) {
-    std::ofstream output(path, std::ios::binary);
-    if (!output) throw std::runtime_error("Unable to open checkpoint for writing");
-    const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
-    const std::uint32_t version = 3;
-    const auto write = [&](const auto& value) {
-        output.write(reinterpret_cast<const char*>(&value), sizeof(value));
-    };
-    output.write(magic.data(), static_cast<std::streamsize>(magic.size()));
-    write(version);
-    write(config_.vocabulary_size);
-    write(config_.context_length);
-    write(config_.embedding_size);
-    write(config_.feed_forward_size);
-    write(config_.layer_count);
-    write(config_.attention_heads);
-    write(config_.seed);
-    write(config_.tokenizer_fingerprint);
-    auto model_parameters = parameters();
-    const std::uint64_t count = static_cast<std::uint64_t>(model_parameters.size());
-    write(count);
-    for (const auto& parameter : model_parameters) {
-        const float value = parameter.value();
-        write(value);
+    const std::filesystem::path destination(path);
+    std::filesystem::path temporary = destination;
+    temporary += ".tmp";
+    try {
+        std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+        if (!output) throw std::runtime_error("Unable to open temporary checkpoint for writing");
+        const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
+        const std::uint32_t version = 3;
+        const auto write = [&](const auto& value) {
+            output.write(reinterpret_cast<const char*>(&value), sizeof(value));
+        };
+        output.write(magic.data(), static_cast<std::streamsize>(magic.size()));
+        write(version);
+        write(config_.vocabulary_size);
+        write(config_.context_length);
+        write(config_.embedding_size);
+        write(config_.feed_forward_size);
+        write(config_.layer_count);
+        write(config_.attention_heads);
+        write(config_.seed);
+        write(config_.tokenizer_fingerprint);
+        auto model_parameters = parameters();
+        const std::uint64_t count = static_cast<std::uint64_t>(model_parameters.size());
+        write(count);
+        for (const auto& parameter : model_parameters) {
+            const float value = parameter.value();
+            if (!std::isfinite(value))
+                throw std::runtime_error("Cannot save checkpoint with non-finite model weights");
+            write(value);
+        }
+        output.flush();
+        if (!output) throw std::runtime_error("Failed while writing model checkpoint");
+        output.close();
+        if (!output) throw std::runtime_error("Failed while closing model checkpoint");
+        replace_checkpoint_file(temporary, destination);
+    } catch (...) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        throw;
     }
-    if (!output) throw std::runtime_error("Failed while writing model checkpoint");
 }
 
 void TransformerModel::load_checkpoint(const std::string& path) {
