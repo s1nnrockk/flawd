@@ -8,7 +8,7 @@ from typing import Iterator
 def normalize_text(text: str) -> str:
     if not isinstance(text, str):
         raise TypeError("dataset text must be a string")
-    return re.sub(r"\\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
@@ -39,14 +39,14 @@ def build_clean_dataset(source: str | Path, destination: str | Path) -> dict[str
     output_count = 0
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
-    with destination_path.open("w", encoding="utf-8", newline="\\n") as output:
+    with destination_path.open("w", encoding="utf-8", newline="\n") as output:
         for record in read_jsonl(source):
             input_count += 1
             text = record["text"]
             if text in seen:
                 continue
             seen.add(text)
-            output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
+            output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
             output_count += 1
     return {"input_records": input_count, "output_records": output_count,
             "duplicates_removed": input_count - output_count}
