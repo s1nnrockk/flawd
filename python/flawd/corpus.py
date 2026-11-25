@@ -28,7 +28,7 @@ def tokenize_jsonl(
     with output_path.open("w+b") as output:
         output.write(_HEADER.pack(_MAGIC, _VERSION, tokenizer.VOCAB_SIZE, 0))
         for record in read_jsonl(source):
-            ids = tokenizer.encode(record["text"], add_eos=True)
+            ids = tokenizer.encode(record["text"], add_bos=True, add_eos=True)
             for token_id in ids:
                 output.write(_TOKEN.pack(token_id))
             record_count += 1
@@ -39,7 +39,7 @@ def tokenize_jsonl(
     manifest = {
         "format": "FLAWDTOK",
         "version": _VERSION,
-        "tokenizer": "utf8-byte-v1",
+        "tokenizer": "utf8-byte-bos-eos-v2",
         "vocabulary_size": tokenizer.VOCAB_SIZE,
         "records": record_count,
         "tokens": token_count,
