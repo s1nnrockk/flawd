@@ -15,7 +15,7 @@ API and website only after the model runtime is dependable.
 - SGD and Adam optimizers.
 - Configurable multi-head causal self-attention, pre-normalized Transformer blocks, and a compact byte-level Transformer model.
 - Model checkpoint save/load with version and configuration validation.
-- Next-token training loop and standalone `flawd_train` executable.
+- Next-token training with averaged gradient accumulation (four supervised targets per optimizer update by default) and standalone `flawd_train` executable.
 - Local checkpoint loading and autoregressive generation with temperature and top-k sampling (`flawd_chat`).
 
 ### Python tools
@@ -70,7 +70,7 @@ For assistant-style training, use conversation records instead of plain text:
 
 The exporter stores assistant-only loss masks in FLAWDTOK v2. User and system messages remain visible to the model as context; assistant responses and the final end-of-turn token are training targets. Conversations must alternate user/assistant turns, may have one system message at the beginning, and must end with an assistant response. Reserved role markers inside message content are rejected.
 
-The initial configuration is intentionally tiny and CPU-oriented. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI evaluates held-out validation loss after every epoch when a separate validation token file is supplied. With validation enabled, it saves the best checkpoint and stops after three consecutive epochs without a meaningful improvement (minimum improvement: 0.0001). This avoids blindly training for every requested epoch and keeps the best validation checkpoint rather than the final, potentially overfit epoch. Without a validation file, it runs the requested number of epochs and saves the final checkpoint. To continue from an existing checkpoint, pass the validation corpus and checkpoint as the final two arguments: `flawd_train train.tokens model.flawd 1 validation.tokens previous.flawd`. The current optimizer state is restarted when resuming; model weights are restored. After training,
+The CLI currently accumulates gradients across four supervised targets before each Adam update; incomplete final groups are averaged correctly. This reduces optimizer-update overhead and produces a less noisy update without keeping multiple full computation graphs alive. The initial configuration is intentionally tiny and CPU-oriented. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI evaluates held-out validation loss after every epoch when a separate validation token file is supplied. With validation enabled, it saves the best checkpoint and stops after three consecutive epochs without a meaningful improvement (minimum improvement: 0.0001). This avoids blindly training for every requested epoch and keeps the best validation checkpoint rather than the final, potentially overfit epoch. Without a validation file, it runs the requested number of epochs and saves the final checkpoint. To continue from an existing checkpoint, pass the validation corpus and checkpoint as the final two arguments: `flawd_train train.tokens model.flawd 1 validation.tokens previous.flawd`. The current optimizer state is restarted when resuming; model weights are restored. After training,
 start the local text-generation CLI:
 
 ```powershell
