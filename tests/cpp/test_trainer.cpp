@@ -61,6 +61,18 @@ int main() {
     if (!rejected_invalid_mask)
         throw std::runtime_error("Trainer accepted an invalid loss mask value");
 
+    flawd::TransformerModel boundary_model_a(config);
+    flawd::TransformerModel boundary_model_b(config);
+    flawd::LanguageModelTrainer boundary_trainer_a(boundary_model_a);
+    flawd::LanguageModelTrainer boundary_trainer_b(boundary_model_b);
+    const std::vector<std::uint8_t> boundary_mask{0, 0, 0, 0, 0, 1, 0};
+    const auto boundary_a = boundary_trainer_a.evaluate(
+        std::vector<std::size_t>{257, 65, 258, 257, 66, 67, 258}, boundary_mask);
+    const auto boundary_b = boundary_trainer_b.evaluate(
+        std::vector<std::size_t>{257, 90, 258, 257, 66, 67, 258}, boundary_mask);
+    if (std::abs(boundary_a.average_loss - boundary_b.average_loss) > 1.0e-6)
+        throw std::runtime_error("Training context leaked across BOS document boundaries");
+
     std::cout << "FLAWD training loop tests passed.\n";
     return 0;
 }
