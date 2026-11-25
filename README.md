@@ -16,7 +16,7 @@ API and website only after the model runtime is dependable.
 - Configurable multi-head causal self-attention, pre-normalized Transformer blocks, and a compact byte-level Transformer model.
 - Model checkpoint save/load with version and configuration validation.
 - Next-token training loop and standalone `flawd_train` executable.
-- Local checkpoint loading and greedy text-generation CLI (`flawd_chat`).
+- Local checkpoint loading and autoregressive generation with temperature and top-k sampling (`flawd_chat`).
 
 ### Python tools
 - Lossless UTF-8 byte tokenizer (IDs 0–255; PAD/BOS/EOS reserved).
@@ -67,7 +67,7 @@ start the local text-generation CLI:
 .\build\Release\flawd_chat.exe .\model.flawd
 ```
 
-It accepts a prompt in the terminal. The model is an experimental byte-level
+It accepts a prompt in the terminal. Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental byte-level
 baseline, not a ChatGPT/Claude-scale model. Useful language models require much
 larger licensed datasets, compute, and further engineering.
 
