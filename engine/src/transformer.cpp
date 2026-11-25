@@ -414,7 +414,7 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
     if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
     std::uint32_t version = 0;
     read(version);
-    if (version != 2 && version != 3)
+    if (version != 2 && version != 3 && version != 4)
         throw std::runtime_error("Unsupported FLAWD checkpoint version");
 
     ModelConfig stored;
@@ -448,8 +448,6 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
         if (!std::isfinite(value)) throw std::runtime_error("Checkpoint contains a non-finite weight");
         values.push_back(value);
     }
-    char trailing = 0;
-    if (input.read(&trailing, 1)) throw std::runtime_error("Checkpoint contains unexpected trailing data");
     AdamState optimizer_state;
     bool has_optimizer_state = false;
     if (version >= 4) {
