@@ -125,3 +125,8 @@ private datasets, personal data, passwords, private keys, or API secrets.
 
 
 The current CPU trainer loads each token corpus into memory and rejects files above 20 million tokens. Larger corpora will require a streaming or sharded training loader rather than increasing this limit blindly.
+
+
+## Web research and knowledge retrieval
+
+FLAWD includes a fast web-search prototype with concurrent page retrieval and a local SQLite full-text knowledge index. See [docs/WEB_RESEARCH.md](docs/WEB_RESEARCH.md) for setup, commands, safety limits, and current integration status. Run it from the Python directory with `python -m flawd.websearch_cli "your query"`.
