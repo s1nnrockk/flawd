@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
         std::mt19937 random(2026);
         flawd::ModelConfig config;
         config.vocabulary_size = 259;
-        config.context_length = 16;
+        config.context_length = 64;
         config.embedding_size = 8;
         config.feed_forward_size = 16;
         config.layer_count = 1;
@@ -70,6 +70,7 @@ int main(int argc, char** argv) {
             if (prompt.empty()) break;
             std::vector<std::size_t> tokens;
             tokens.reserve(prompt.size() + 128);
+            tokens.push_back(257);
             const std::string formatted_prompt = "<|user|>\n" + prompt + "\n<|assistant|>\n";
             for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
             std::cout << "FLAWD> " << std::flush;
