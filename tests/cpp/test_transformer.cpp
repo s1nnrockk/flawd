@@ -39,6 +39,14 @@ int main() {
     model.load_checkpoint(checkpoint_path);
     if (std::fabs(model.parameters().front().value() - original_weight) > 1e-6F)
         throw std::runtime_error("Checkpoint did not restore model weights");
+    auto different_heads = config;
+    different_heads.attention_heads = 4;
+    flawd::TransformerModel incompatible_model(different_heads);
+    bool rejected_checkpoint = false;
+    try { incompatible_model.load_checkpoint(checkpoint_path); }
+    catch (const std::runtime_error&) { rejected_checkpoint = true; }
+    if (!rejected_checkpoint)
+        throw std::runtime_error("Checkpoint accepted incompatible attention configuration");
     std::remove(checkpoint_path.c_str());
 
     if (model.parameters().empty())
