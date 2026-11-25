@@ -52,8 +52,8 @@ std::vector<std::size_t> load_tokens(const std::string& path, std::size_t expect
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: flawd_train <dataset.tokens> <model.flawd> [epochs]\n";
+    if (argc < 3 || argc > 5) {
+        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\n";
         return 2;
     }
     try {
@@ -66,6 +66,7 @@ int main(int argc, char** argv) {
         config.embedding_size = 8;
         config.feed_forward_size = 16;
         config.layer_count = 1;
+        config.attention_heads = 2;
         config.seed = 2026;
 
         auto tokens = load_tokens(argv[1], config.vocabulary_size);
@@ -76,8 +77,14 @@ int main(int argc, char** argv) {
 
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << stats.steps << "\n"
-                  << "Average loss: " << stats.average_loss << "\n"
-                  << "Checkpoint: " << argv[2] << "\n";
+                  << "Training loss: " << stats.average_loss << "\n";
+        if (argc == 5) {
+            const auto validation_tokens = load_tokens(argv[4], config.vocabulary_size);
+            const auto validation = trainer.evaluate(validation_tokens);
+            std::cout << "Validation steps: " << validation.steps << "\n"
+                      << "Validation loss: " << validation.average_loss << "\n";
+        }
+        std::cout << "Checkpoint: " << argv[2] << "\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "FLAWD training error: " << error.what() << '\n';
