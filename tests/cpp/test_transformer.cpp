@@ -31,6 +31,13 @@ int main() {
         if (std::fabs(first[0][i].value() - changed_future[0][i].value()) > 1e-5F)
             throw std::runtime_error("Causal attention leaked a future token");
     }
+    const std::vector<std::size_t> longer_input{10, 20, 30, 40};
+    const auto longer_full = model.forward(longer_input);
+    const auto longer_last = model.forward_last(longer_input);
+    for (std::size_t i = 0; i < config.vocabulary_size; ++i) {
+        if (std::fabs(longer_last[i].value() - longer_full.back()[i].value()) > 1e-5F)
+            throw std::runtime_error("Optimized final-token path differs on a longer sequence");
+    }
     const auto original_weight = model.parameters().front().value();
     const std::string checkpoint_path = "flawd_test_checkpoint.bin";
     model.save_checkpoint(checkpoint_path);
