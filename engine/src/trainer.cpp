@@ -3,6 +3,26 @@
 #include <stdexcept>
 
 namespace flawd {
+namespace {
+std::size_t context_start(const std::vector<std::size_t>& tokens,
+                          std::size_t target_index,
+                          std::size_t context_length,
+                          std::size_t vocabulary_size) {
+    std::size_t start = target_index > context_length
+        ? target_index - context_length : 0;
+    // FLAWD's byte tokenizer reserves token 257 for BOS. Never let a
+    // training example attend to the previous record across this boundary.
+    if (vocabulary_size > 257) {
+        for (std::size_t index = target_index; index > start; --index) {
+            if (tokens[index - 1] == 257) {
+                start = index - 1;
+                break;
+            }
+        }
+    }
+    return start;
+}
+} // namespace
 
 LanguageModelTrainer::LanguageModelTrainer(TransformerModel& model, float learning_rate)
     : model_(model), optimizer_(model.parameters(), learning_rate) {}
@@ -50,8 +70,9 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
     for (std::size_t epoch = 0; epoch < epochs; ++epoch) {
         for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
             if (loss_mask[target_index] == 0) continue;
-            const std::size_t start = target_index > model_.config().context_length
-                ? target_index - model_.config().context_length : 0;
+            const std::size_t start = context_start(token_stream, target_index,
+                                                    model_.config().context_length,
+                                                    model_.config().vocabulary_size);
             std::vector<std::size_t> context(
                 token_stream.begin() + static_cast<std::ptrdiff_t>(start),
                 token_stream.begin() + static_cast<std::ptrdiff_t>(target_index));
@@ -88,8 +109,9 @@ TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& tok
     double total_loss = 0.0;
     for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
         if (loss_mask[target_index] == 0) continue;
-        const std::size_t start = target_index > model_.config().context_length
-            ? target_index - model_.config().context_length : 0;
+        const std::size_t start = context_start(token_stream, target_index,
+                                                model_.config().context_length,
+                                                model_.config().vocabulary_size);
         const std::vector<std::size_t> context(
             token_stream.begin() + static_cast<std::ptrdiff_t>(start),
             token_stream.begin() + static_cast<std::ptrdiff_t>(target_index));
