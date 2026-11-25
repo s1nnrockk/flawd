@@ -30,7 +30,7 @@ void ModelConfig::validate() const {
     if (vocabulary_size < 2 || context_length == 0 || embedding_size == 0 ||
         feed_forward_size == 0 || layer_count == 0 || attention_heads == 0 ||
         embedding_size % attention_heads != 0)
-        throw std::invalid_argument("Transformer configuration dimensions must be positive");
+        throw std::invalid_argument("Transformer dimensions must be positive and embedding size must be divisible by attention heads");
 }
 
 CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::size_t head_count,
