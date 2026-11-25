@@ -20,8 +20,7 @@ Role-tagged conversations use system/user/assistant markers. FLAWDTOK v2
 stores a one-byte loss flag alongside each token. System and user tokens are
 available as causal context, but only assistant content is selected as a
 training/evaluation target. Plain-text records retain ordinary next-token
-training. The C++ trainer accepts both masked and legacy unmasked streams. Each BOS token starts a fresh context window, preventing attention from crossing document boundaries;
-FLAWDTOK v1 files are interpreted as all-target corpora.
+training. The C++ trainer accepts both masked and legacy unmasked streams. Each BOS token starts a fresh context window, preventing attention from crossing document boundaries. The training CLI validates exact file length, token IDs, loss flags, PAD exclusion, and balanced BOS/EOS record boundaries before allocating the corpus. FLAWDTOK v1 files remain supported; their BOS markers are automatically excluded from loss.
 
 This implements assistant-only loss masking, a necessary supervised
 instruction-tuning primitive. Conversation records are structurally validated:
@@ -36,10 +35,12 @@ training duration, and rigorous evaluation.
 - JSONL validation, normalization, deduplication, and deterministic splits.
 - Role-tagged conversation serialization with code formatting preservation.
 - FLAWDTOK v2 export with assistant-only loss masks and provenance manifest.
+- Atomic token/manifest writes so malformed input cannot leave a partial token file in place; empty corpora are rejected.
 
 ## Engineering constraints
 
 - Keep the baseline dependency-light and CPU-friendly.
+- Evaluate held-out validation loss after every epoch, retain the best checkpoint, and stop after three epochs without meaningful improvement.
 - Validate tensor shapes, token IDs, masks, and dataset records.
 - Keep large datasets and checkpoints outside Git.
 - Track dataset provenance and usage permissions.
