@@ -140,7 +140,8 @@ int main(int argc, char** argv) {
         const std::size_t epochs = argc >= 4 ? parse_epochs(argv[3]) : 1;
         if (same_path(argv[1], argv[2]))
             throw std::invalid_argument("Model checkpoint path must not overwrite the training corpus");
-        if (argc >= 5 && same_path(argv[4], argv[2]))
+        const bool has_validation = argc >= 5 && std::string(argv[4]) != "-";
+        if (has_validation && same_path(argv[4], argv[2]))
             throw std::invalid_argument("Model checkpoint path must not overwrite the validation corpus");
 
         auto training = load_tokens(argv[1], 0);
@@ -157,7 +158,7 @@ int main(int argc, char** argv) {
 
 
         TokenCorpus validation;
-        if (argc >= 5) {
+        if (has_validation) {
             std::error_code path_error;
             if (std::filesystem::equivalent(argv[1], argv[4], path_error) && !path_error)
                 throw std::invalid_argument("Training and validation files must be different");
@@ -181,7 +182,7 @@ int main(int argc, char** argv) {
         double best_validation_loss = std::numeric_limits<double>::infinity();
         flawd::TrainingStats best_validation_stats;
 
-        if (argc >= 5) {
+        if (has_validation) {
             best_validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
             best_validation_loss = best_validation_stats.average_loss;
             trainer.save_checkpoint(argv[2]);
@@ -199,7 +200,7 @@ int main(int argc, char** argv) {
                       << " | training loss: " << epoch_stats.average_loss
                       << " | optimizer updates: " << trainer.steps();
 
-            if (argc >= 5) {
+            if (has_validation) {
                 const auto validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
                 std::cout << " | validation loss: " << validation_stats.average_loss;
                 if (validation_stats.average_loss < best_validation_loss - minimum_improvement) {
@@ -222,11 +223,11 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (argc < 5) trainer.save_checkpoint(argv[2]);
+        if (!has_validation) trainer.save_checkpoint(argv[2]);
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << total_steps << "\n"
                   << "Training loss: " << (total_loss / static_cast<double>(total_steps)) << "\n";
-        if (argc >= 5) {
+        if (has_validation) {
             std::cout << "Best validation steps: " << best_validation_stats.steps << "\n"
                       << "Best validation loss: " << best_validation_loss << "\n";
         }
