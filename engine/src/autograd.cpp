@@ -1,12 +1,10 @@
 #include "flawd/autograd.hpp"
-
 #include <cmath>
 #include <functional>
 #include <stdexcept>
 #include <utility>
 
 namespace flawd {
-
 struct Scalar::Node {
     float data = 0.0F;
     float gradient = 0.0F;
@@ -41,26 +39,23 @@ void Scalar::backward() const {
 
 Scalar operator+(const Scalar& a, const Scalar& b) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = a.value() + b.value();
-    n->parents = {a.node_, b.node_};
+    n->data = a.value() + b.value(); n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [self = n.get(), x, y] { x->gradient += self->gradient; y->gradient += self->gradient; };
+    n->backward = [self=n.get(), x, y] { x->gradient += self->gradient; y->gradient += self->gradient; };
     return Scalar(n);
 }
 Scalar operator-(const Scalar& a, const Scalar& b) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = a.value() - b.value();
-    n->parents = {a.node_, b.node_};
+    n->data = a.value() - b.value(); n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [self = n.get(), x, y] { x->gradient += self->gradient; y->gradient -= self->gradient; };
+    n->backward = [self=n.get(), x, y] { x->gradient += self->gradient; y->gradient -= self->gradient; };
     return Scalar(n);
 }
 Scalar operator*(const Scalar& a, const Scalar& b) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = a.value() * b.value();
-    n->parents = {a.node_, b.node_};
+    n->data = a.value() * b.value(); n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [self = n.get(), x, y] {
+    n->backward = [self=n.get(), x, y] {
         x->gradient += y->data * self->gradient;
         y->gradient += x->data * self->gradient;
     };
@@ -69,10 +64,9 @@ Scalar operator*(const Scalar& a, const Scalar& b) {
 Scalar operator/(const Scalar& a, const Scalar& b) {
     if (b.value() == 0.0F) throw std::domain_error("Division by zero in autograd");
     auto n = std::make_shared<Scalar::Node>();
-    n->data = a.value() / b.value();
-    n->parents = {a.node_, b.node_};
+    n->data = a.value() / b.value(); n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [self = n.get(), x, y] {
+    n->backward = [self=n.get(), x, y] {
         x->gradient += self->gradient / y->data;
         y->gradient -= self->gradient * x->data / (y->data * y->data);
     };
@@ -80,27 +74,39 @@ Scalar operator/(const Scalar& a, const Scalar& b) {
 }
 Scalar tanh(const Scalar& input) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = std::tanh(input.value());
-    n->parents = {input.node_};
+    n->data = std::tanh(input.value()); n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [self = n.get(), x] { x->gradient += (1.0F - self->data * self->data) * self->gradient; };
+    n->backward = [self=n.get(), x] { x->gradient += (1.0F-self->data*self->data)*self->gradient; };
     return Scalar(n);
 }
 Scalar relu(const Scalar& input) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = input.value() > 0.0F ? input.value() : 0.0F;
-    n->parents = {input.node_};
+    n->data = input.value() > 0.0F ? input.value() : 0.0F; n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [self = n.get(), x] { if (x->data > 0.0F) x->gradient += self->gradient; };
+    n->backward = [self=n.get(), x] { if (x->data > 0.0F) x->gradient += self->gradient; };
     return Scalar(n);
 }
 Scalar exp(const Scalar& input) {
     auto n = std::make_shared<Scalar::Node>();
-    n->data = std::exp(input.value());
-    n->parents = {input.node_};
+    n->data = std::exp(input.value()); n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [self = n.get(), x] { x->gradient += self->data * self->gradient; };
+    n->backward = [self=n.get(), x] { x->gradient += self->data*self->gradient; };
     return Scalar(n);
 }
-
+Scalar sqrt(const Scalar& input) {
+    if (input.value() <= 0.0F) throw std::domain_error("sqrt expects a positive scalar");
+    auto n = std::make_shared<Scalar::Node>();
+    n->data = std::sqrt(input.value()); n->parents = {input.node_};
+    const auto x = input.node_;
+    n->backward = [self=n.get(), x] { x->gradient += self->gradient/(2.0F*self->data); };
+    return Scalar(n);
+}
+Scalar log(const Scalar& input) {
+    if (input.value() <= 0.0F) throw std::domain_error("log expects a positive scalar");
+    auto n = std::make_shared<Scalar::Node>();
+    n->data = std::log(input.value()); n->parents = {input.node_};
+    const auto x = input.node_;
+    n->backward = [self=n.get(), x] { x->gradient += self->gradient/x->data; };
+    return Scalar(n);
+}
 } // namespace flawd
