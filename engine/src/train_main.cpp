@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     try {
-        const std::size_t epochs = argc == 4 ? static_cast<std::size_t>(std::stoull(argv[3])) : 1;
+        const std::size_t epochs = argc >= 4 ? static_cast<std::size_t>(std::stoull(argv[3])) : 1;
         if (epochs == 0) throw std::invalid_argument("Epoch count must be positive");
 
         flawd::ModelConfig config;
