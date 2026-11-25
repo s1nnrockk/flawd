@@ -7,7 +7,12 @@ on:
     paths:
       - "data/seed/**"
       - "engine/**"
-      - "python/**"
+      - "python/flawd/dataset.py"
+      - "python/flawd/dataset_cli.py"
+      - "python/flawd/tokenizer.py"
+      - "python/flawd/tokenizer_cli.py"
+      - "python/flawd/corpus.py"
+      - "python/flawd/corpus_cli.py"
       - ".github/workflows/train.yml"
 
 concurrency:
