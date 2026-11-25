@@ -5,13 +5,13 @@ import re
 from pathlib import Path
 from typing import Iterator
 
-_ROLE_PATTERN = re.compile(r"<\\|(system|user|assistant)\\|>\\n")
+_ROLE_PATTERN = re.compile(r"<\|(system|user|assistant)\|>\n")
 
 
 def normalize_text(text: str) -> str:
     if not isinstance(text, str):
         raise TypeError("dataset text must be a string")
-    return re.sub(r"\\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def validate_serialized_conversation(text: str) -> None:
@@ -55,8 +55,8 @@ def format_conversation(messages: list[dict[str, str]]) -> str:
             raise ValueError(f"message {index} contains a reserved role marker")
         if role == "system" and (index != 1 or "system" in roles):
             raise ValueError("system message is allowed only once at the beginning")
-        content = content.replace("\\r\\n", "\\n").replace("\\r", "\\n").strip()
-        parts.append(f"<|{role}|>\\n{content}\\n")
+        content = content.replace("\r\n", "\n").replace("\r", "\n").strip()
+        parts.append(f"<|{role}|>\n{content}\n")
         roles.append(role)
     result = "".join(parts)
     validate_serialized_conversation(result)
@@ -77,8 +77,8 @@ def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
                 raise ValueError(f"{file_path}:{line_number}: expected a JSON object")
             if isinstance(record.get("text"), str):
                 raw_text = record["text"]
-                normalized = raw_text.replace("\\r\\n", "\\n").replace("\\r", "\\n").strip()
-                if normalized.startswith(("<|system|>\\n", "<|user|>\\n", "<|assistant|>\\n")):
+                normalized = raw_text.replace("\r\n", "\n").replace("\r", "\n").strip()
+                if normalized.startswith(("<|system|>\n", "<|user|>\n", "<|assistant|>\n")):
                     try:
                         validate_serialized_conversation(normalized)
                     except ValueError as exc:
@@ -125,9 +125,9 @@ def build_clean_dataset(
         source_path = Path(source).resolve()
         if destination_path.resolve() == source_path:
             raise ValueError("Source and output paths must be different")
-        with destination_path.open("w", encoding="utf-8", newline="\\n") as output:
+        with destination_path.open("w", encoding="utf-8", newline="\n") as output:
             for text in records:
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
         return {
             "input_records": input_count,
             "output_records": len(records),
@@ -150,11 +150,11 @@ def build_clean_dataset(
     random.Random(seed).shuffle(indices)
     validation_indices = set(indices[:validation_count])
     validation_path.parent.mkdir(parents=True, exist_ok=True)
-    with destination_path.open("w", encoding="utf-8", newline="\\n") as train_output:
-        with validation_path.open("w", encoding="utf-8", newline="\\n") as validation_output:
+    with destination_path.open("w", encoding="utf-8", newline="\n") as train_output:
+        with validation_path.open("w", encoding="utf-8", newline="\n") as validation_output:
             for index, text in enumerate(records):
                 output = validation_output if index in validation_indices else train_output
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
 
     return {
         "input_records": input_count,
