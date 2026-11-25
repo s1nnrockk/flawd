@@ -165,7 +165,7 @@ def build_clean_dataset(
         if destination_path.resolve() == source_path:
             raise ValueError("Source and output paths must be different")
         with destination_path.open("w", encoding="utf-8", newline="\n") as output:
-            for text in records:
+            for record in records:
                 output.write(json.dumps(record, ensure_ascii=False) + "\n")
         return {
             "input_records": input_count,
@@ -191,9 +191,9 @@ def build_clean_dataset(
     validation_path.parent.mkdir(parents=True, exist_ok=True)
     with destination_path.open("w", encoding="utf-8", newline="\n") as train_output:
         with validation_path.open("w", encoding="utf-8", newline="\n") as validation_output:
-            for index, text in enumerate(records):
+            for index, record in enumerate(records):
                 output = validation_output if index in validation_indices else train_output
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+                output.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     return {
         "input_records": input_count,
