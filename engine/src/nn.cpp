@@ -42,6 +42,30 @@ std::vector<Scalar> Linear::parameters() {
 std::size_t Linear::input_size() const noexcept { return input_size_; }
 std::size_t Linear::output_size() const noexcept { return output_size_; }
 
+
+Embedding::Embedding(std::size_t vocabulary_size, std::size_t embedding_size, std::uint32_t seed)
+    : vocabulary_size_(vocabulary_size), embedding_size_(embedding_size) {
+    if (vocabulary_size == 0 || embedding_size == 0)
+        throw std::invalid_argument("Embedding dimensions must be non-zero");
+    std::mt19937 generator(seed);
+    const float limit = 1.0F / std::sqrt(static_cast<float>(embedding_size));
+    std::uniform_real_distribution<float> distribution(-limit, limit);
+    weights_.reserve(vocabulary_size * embedding_size);
+    for (std::size_t i = 0; i < vocabulary_size * embedding_size; ++i)
+        weights_.emplace_back(distribution(generator));
+}
+ScalarVector Embedding::forward(std::size_t token_id) const {
+    if (token_id >= vocabulary_size_) throw std::out_of_range("Embedding token id is out of range");
+    ScalarVector result;
+    result.reserve(embedding_size_);
+    for (std::size_t i = 0; i < embedding_size_; ++i)
+        result.push_back(weights_[token_id * embedding_size_ + i]);
+    return result;
+}
+std::vector<Scalar> Embedding::parameters() { return weights_; }
+std::size_t Embedding::vocabulary_size() const noexcept { return vocabulary_size_; }
+std::size_t Embedding::embedding_size() const noexcept { return embedding_size_; }
+
 ScalarVector ReLU::forward(const ScalarVector& input) {
     ScalarVector output;
     output.reserve(input.size());
