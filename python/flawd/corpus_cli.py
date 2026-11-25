@@ -10,7 +10,7 @@ def main() -> int:
     parser.add_argument("input", help="Clean UTF-8 JSONL dataset")
     parser.add_argument("output", help="Output .tokens file")
     args = parser.parse_args()
-    print(json.dumps(tokenize_jsonl(args.input, args.output), indent=2))
+    print(json.dumps(tokenize_jsonl(\n        args.input, args.output,\n        source_description=args.source_description,\n        license_id=args.license_id,\n        language=args.language,\n    ), indent=2))
     return 0
 
 
