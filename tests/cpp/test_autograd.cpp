@@ -62,5 +62,19 @@ int main() {
     }
     const auto final_loss = flawd::mean_squared_error(model.forward(input), target).value();
     expect(final_loss < first_loss, "SGD training did not reduce loss");
+    flawd::Linear adam_linear(1, 1, 13);
+    flawd::Sequential adam_model;
+    adam_model.add(adam_linear);
+    flawd::Adam adam(adam_model.parameters(), 0.02F);
+    const float adam_initial = flawd::mean_squared_error(adam_model.forward(input), target).value();
+    for (int step = 0; step < 100; ++step) {
+        adam.zero_grad();
+        const auto loss = flawd::mean_squared_error(adam_model.forward(input), target);
+        loss.backward();
+        adam.step();
+    }
+    const float adam_final = flawd::mean_squared_error(adam_model.forward(input), target).value();
+    expect(adam_final < adam_initial, "Adam training did not reduce loss");
+
     std::cout << "All FLAWD autograd and neural-layer tests passed.\n";
 }
