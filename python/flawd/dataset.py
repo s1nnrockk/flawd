@@ -54,9 +54,9 @@ def build_clean_dataset(
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     if validation_destination is None:
-        with destination_path.open("w", encoding="utf-8", newline="\\n") as output:
+        with destination_path.open("w", encoding="utf-8", newline="\n") as output:
             for text in records:
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
         return {
             "input_records": input_count,
             "output_records": len(records),
@@ -76,11 +76,11 @@ def build_clean_dataset(
     random.Random(seed).shuffle(indices)
     validation_indices = set(indices[:validation_count])
     validation_path.parent.mkdir(parents=True, exist_ok=True)
-    with destination_path.open("w", encoding="utf-8", newline="\\n") as train_output, \\
-         validation_path.open("w", encoding="utf-8", newline="\\n") as validation_output:
-        for index, text in enumerate(records):
-            output = validation_output if index in validation_indices else train_output
-            output.write(json.dumps({"text": text}, ensure_ascii=False) + "\\n")
+    with destination_path.open("w", encoding="utf-8", newline="\n") as train_output:
+        with validation_path.open("w", encoding="utf-8", newline="\n") as validation_output:
+            for index, text in enumerate(records):
+                output = validation_output if index in validation_indices else train_output
+                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
 
     return {
         "input_records": input_count,
