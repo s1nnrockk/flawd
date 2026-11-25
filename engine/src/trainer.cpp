@@ -52,6 +52,31 @@ TrainingStats LanguageModelTrainer::train(const std::vector<std::size_t>& token_
     return stats;
 }
 
+TrainingStats LanguageModelTrainer::evaluate(const std::vector<std::size_t>& token_stream,
+                                               std::size_t stride) {
+    if (token_stream.size() < 2)
+        throw std::invalid_argument("Evaluation token stream must contain at least two tokens");
+    if (stride == 0) throw std::invalid_argument("Evaluation stride must be non-zero");
+    for (const auto token : token_stream)
+        if (token >= model_.config().vocabulary_size)
+            throw std::out_of_range("Evaluation stream contains a token outside the vocabulary");
+
+    TrainingStats stats;
+    double total_loss = 0.0;
+    for (std::size_t target_index = 1; target_index < token_stream.size(); target_index += stride) {
+        const std::size_t start = target_index > model_.config().context_length
+            ? target_index - model_.config().context_length : 0;
+        const std::vector<std::size_t> context(
+            token_stream.begin() + static_cast<std::ptrdiff_t>(start),
+            token_stream.begin() + static_cast<std::ptrdiff_t>(target_index));
+        const auto logits = model_.forward_last(context);
+        total_loss += cross_entropy_loss(logits, token_stream[target_index]).value();
+        ++stats.steps;
+    }
+    stats.average_loss = total_loss / static_cast<double>(stats.steps);
+    return stats;
+}
+
 void LanguageModelTrainer::set_learning_rate(float learning_rate) {
     optimizer_.set_learning_rate(learning_rate);
 }
