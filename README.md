@@ -40,8 +40,9 @@ Clean and tokenize it:
 
 ```powershell
 cd python
-python -m flawd.dataset_cli raw.jsonl clean.jsonl
-python -m flawd.corpus_cli clean.jsonl tiny.tokens
+python -m flawd.dataset_cli raw.jsonl train.jsonl --validation-output validation.jsonl
+python -m flawd.corpus_cli train.jsonl train.tokens
+python -m flawd.corpus_cli validation.jsonl validation.tokens
 cd ..
 ```
 
