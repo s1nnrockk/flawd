@@ -36,6 +36,7 @@ class ByteTokenizerTests(unittest.TestCase):
             tokenizer.save(path)
             loaded = ByteBPETokenizer.load(path)
             self.assertEqual(loaded.merges, tokenizer.merges)
+            self.assertEqual(loaded.fingerprint, tokenizer.fingerprint)
             text = "abc abd — тест"
             self.assertEqual(loaded.decode(loaded.encode(text)), text)
 
