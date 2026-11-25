@@ -1,7 +1,7 @@
 # FLAWD Python tools
 
 Python contains the byte tokenizer and dataset preparation tools. The C++ engine
-contains the neural network, Transformer, optimizer, and training loop.
+contains the neural network, Transformer, optimizer, and training loop. The CLI trainer averages gradients over four supervised targets per Adam update; incomplete final groups are scaled by their actual size.
 
 ## Requirements
 
