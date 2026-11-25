@@ -28,6 +28,10 @@ int main() {
     classification_loss.backward();
     expect(logits[2].grad() < 0.0F, "cross entropy target gradient must be negative");
 
+    const auto extreme_loss = flawd::cross_entropy_loss(
+        {flawd::Scalar(1000.0F), flawd::Scalar(-1000.0F)}, 1);
+    near(extreme_loss.value(), 2000.0F, "stable cross entropy failed for extreme logits");
+
     flawd::LayerNorm normalization(3);
     const auto normalized = normalization.forward({flawd::Scalar(1.0F), flawd::Scalar(2.0F), flawd::Scalar(3.0F)});
     const float normalized_sum = normalized[0].value() + normalized[1].value() + normalized[2].value();
