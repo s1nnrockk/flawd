@@ -12,12 +12,14 @@ def main() -> int:
     parser.add_argument("--source-description", help="Dataset source or provenance note")
     parser.add_argument("--license", dest="license_id", help="Dataset license or permission identifier")
     parser.add_argument("--language", help="Primary language tag, e.g. en or ru")
+    parser.add_argument("--tokenizer", help="Optional trained .bpe tokenizer file")
     args = parser.parse_args()
     print(json.dumps(tokenize_jsonl(
         args.input, args.output,
         source_description=args.source_description,
         license_id=args.license_id,
         language=args.language,
+        tokenizer_path=args.tokenizer,
     ), indent=2))
     return 0
 
