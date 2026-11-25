@@ -10,6 +10,10 @@ on:
       - "python/**"
       - ".github/workflows/train.yml"
 
+concurrency:
+  group: flawd-seed-training-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
