@@ -13,11 +13,13 @@ class ByteBPETokenizer {
 public:
     explicit ByteBPETokenizer(const std::string& path);
     std::size_t vocabulary_size() const noexcept;
+    std::uint64_t fingerprint() const noexcept;
     std::vector<std::size_t> encode(const std::string& text) const;
     std::string decode(std::size_t token_id) const;
 
 private:
     std::size_t vocabulary_size_ = 259;
+    std::uint64_t fingerprint_ = 0;
     std::vector<std::pair<std::size_t, std::size_t>> merges_;
     std::unordered_map<std::uint32_t, std::size_t> ranks_;
 };
