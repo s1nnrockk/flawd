@@ -33,7 +33,7 @@ class DatasetTests(unittest.TestCase):
             train = root / "train.jsonl"
             validation = root / "validation.jsonl"
             source.write_text(
-                "".join(json.dumps({"text": f"record {index}"}) + "\\n" for index in range(20)),
+                "".join(json.dumps({"text": f"record {index}"}) + "\n" for index in range(20)),
                 encoding="utf-8",
             )
             stats = build_clean_dataset(source, train, validation, 0.2, 77)
