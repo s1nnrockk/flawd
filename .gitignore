@@ -28,3 +28,7 @@ Thumbs.db
 *.flawd
 *.ckpt
 *.weights
+
+# Local training workspace
+/python/training-run/
+*.bpe
