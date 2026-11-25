@@ -54,7 +54,7 @@ jobs:
       - name: Fit BPE on training data only and export token files
         working-directory: python
         run: |
-          python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 2048 --max-training-bytes 2000000
+          python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 1024 --max-training-bytes 180000 --shuffle-seed 2026
           python -m flawd.corpus_cli training-run/train.jsonl training-run/train.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined licensed instruction corpus; train split" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
           python -m flawd.corpus_cli training-run/validation.jsonl training-run/validation.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined held-out validation corpus" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
 
@@ -66,6 +66,15 @@ jobs:
           from pathlib import Path
           from flawd.dataset import validate_jsonl
           root = Path("training-run")
+          def language_counts(path):
+              counts = {}
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  if not line.strip():
+                      continue
+                  record = json.loads(line)
+                  for language in record.get("languages", []):
+                      counts[language] = counts.get(language, 0) + 1
+              return counts
           manifest = {
               "project": "FLAWD",
               "sources": [
@@ -75,7 +84,9 @@ jobs:
               ],
               "train_records": validate_jsonl(root / "train.jsonl"),
               "validation_records": validate_jsonl(root / "validation.jsonl"),
-              "tokenizer": "BPE; vocab target 2048; trained on train split only",
+              "source_train_records_by_language": language_counts(root / "raw-train.jsonl"),
+              "source_validation_records_by_language": language_counts(root / "raw-validation.jsonl"),
+              "tokenizer": "BPE; vocab target 1024; deterministically shuffled train records; trained on train split only",
               "note": "Prepared corpus artifact; not a trained model checkpoint."
           }
           (root / "CORPUS_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
