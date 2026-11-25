@@ -31,7 +31,8 @@ int main(int argc, char** argv) {
             if (prompt.empty()) break;
             std::vector<std::size_t> tokens;
             tokens.reserve(prompt.size() + 128);
-            const std::string formatted_prompt = "<|user|>\\n" + prompt + "\\n<|assistant|>\\n";\n            for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
+            const std::string formatted_prompt = "<|user|>\n" + prompt + "\n<|assistant|>\n";
+            for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
             std::cout << "FLAWD> " << std::flush;
 
             for (std::size_t step = 0; step < 128; ++step) {
