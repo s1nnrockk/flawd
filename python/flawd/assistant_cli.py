@@ -58,7 +58,7 @@ def main() -> int:
     else:
         prompt = "Answer accurately. If you do not know, say so. Question: " + args.query
     # chat_main reads one prompt line; keep the newest question at the end of context.
-    prompt = _compact(prompt)[:1800]
+    prompt = _compact(prompt)[-1800:]  # Preserve the actual question at the end of the model context.
     command = [str(chat), str(model), "0.2", "20"]
     if args.tokenizer:
         command.append(args.tokenizer)
