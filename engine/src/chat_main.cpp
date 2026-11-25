@@ -82,7 +82,8 @@ int main(int argc, char** argv) {
                     tokens.begin() + static_cast<std::ptrdiff_t>(start), tokens.end());
                 const auto logits = model.forward_last(context);
                 const auto next_token = sample_next_token(logits, temperature, top_k, random);
-                if (next_token == 258) break;
+                if (next_token == 258 || next_token == 257) break;
+                if (next_token == 256) continue;
                 tokens.push_back(next_token);
                 if (next_token <= 255) std::cout << static_cast<char>(next_token) << std::flush;
             }
