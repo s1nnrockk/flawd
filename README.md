@@ -130,3 +130,8 @@ The current CPU trainer loads each token corpus into memory and rejects files ab
 ## Web research and knowledge retrieval
 
 FLAWD includes a fast web-search prototype with concurrent page retrieval and a local SQLite full-text knowledge index. See [docs/WEB_RESEARCH.md](docs/WEB_RESEARCH.md) for setup, commands, safety limits, and current integration status. Run it from the Python directory with `python -m flawd.websearch_cli "your query"`.
+
+
+### Local web research API
+
+Run `python -m flawd.web_api --port 8765` from the `python` directory to expose the retrieval backend to a local web interface at `http://127.0.0.1:8765`. It provides `/health`, `/api/search`, and `/api/knowledge`; search results are cached briefly and fetched pages are indexed locally. See [docs/WEB_API.md](docs/WEB_API.md). The service binds to loopback and is not intended to be exposed publicly.
