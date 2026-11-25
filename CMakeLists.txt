@@ -32,4 +32,8 @@ if(BUILD_TESTING)
     add_executable(flawd_autograd_tests tests/cpp/test_autograd.cpp)
     target_link_libraries(flawd_autograd_tests PRIVATE flawd_engine)
     add_test(NAME flawd_autograd_tests COMMAND flawd_autograd_tests)
+
+    add_executable(flawd_transformer_tests tests/cpp/test_transformer.cpp)
+    target_link_libraries(flawd_transformer_tests PRIVATE flawd_engine)
+    add_test(NAME flawd_transformer_tests COMMAND flawd_transformer_tests)
 endif()
