@@ -21,7 +21,7 @@ UTF-8 JSON Lines. Plain-text records are supported:
 {"text":"A training passage with documented usage rights."}
 ```
 
-Instruction-tuning conversations can use role-tagged messages. The serializer
+Conversation-format records (a foundation for later instruction tuning) can use role-tagged messages. The serializer
 preserves message line breaks (important for code examples):
 
 ```json
@@ -29,7 +29,7 @@ preserves message line breaks (important for code examples):
 ```
 
 Roles currently supported: system, user, and assistant. Conversation data is
-serialized using role markers, the same markers used by the chat prompt.
+serialized using role markers, the same markers used by the chat prompt. The current trainer predicts every token in the serialized conversation; it does not yet mask system/user tokens for assistant-only supervised fine-tuning.
 
 ## Prepare a corpus
 
