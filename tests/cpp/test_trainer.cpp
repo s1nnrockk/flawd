@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <cstdio>
 #include <stdexcept>
 #include <vector>
 
@@ -82,6 +83,36 @@ int main() {
     catch (const std::invalid_argument&) { rejected_zero_accumulation = true; }
     if (!rejected_zero_accumulation)
         throw std::runtime_error("Trainer accepted zero gradient accumulation");
+
+    const std::string resume_path = "flawd_training_resume_test.bin";
+    flawd::TransformerModel uninterrupted_model(config);
+    flawd::LanguageModelTrainer uninterrupted_trainer(uninterrupted_model, 0.001F);
+    const std::vector<std::size_t> resume_tokens{257, 10, 11, 12, 13, 258};
+    const std::vector<std::uint8_t> resume_mask{0, 0, 1, 1, 1, 1};
+    uninterrupted_trainer.train(resume_tokens, resume_mask, 1, 1, 2);
+    uninterrupted_trainer.save_checkpoint(resume_path);
+
+    flawd::TransformerModel resumed_model(config);
+    flawd::LanguageModelTrainer resumed_trainer(resumed_model, 0.001F);
+    resumed_trainer.load_checkpoint(resume_path);
+    if (resumed_trainer.steps() != uninterrupted_trainer.steps())
+        throw std::runtime_error("Training checkpoint did not restore Adam update count");
+
+    const std::vector<std::size_t> continuation_tokens{257, 10, 11, 12, 13, 14, 258};
+    const std::vector<std::uint8_t> continuation_mask{0, 0, 1, 1, 1, 1, 1};
+    uninterrupted_trainer.train(continuation_tokens, continuation_mask, 1, 1, 2);
+    resumed_trainer.train(continuation_tokens, continuation_mask, 1, 1, 2);
+    const auto uninterrupted_parameters = uninterrupted_model.parameters();
+    const auto resumed_parameters = resumed_model.parameters();
+    if (uninterrupted_parameters.size() != resumed_parameters.size())
+        throw std::runtime_error("Resumed model parameter count changed");
+    for (std::size_t index = 0; index < uninterrupted_parameters.size(); ++index) {
+        if (std::fabs(uninterrupted_parameters[index].value() -
+                      resumed_parameters[index].value()) > 1e-7F)
+            throw std::runtime_error("Resumed Adam training diverged from uninterrupted training");
+    }
+    std::remove(resume_path.c_str());
+    std::remove((resume_path + ".tmp").c_str());
 
     flawd::TransformerModel boundary_model_a(config);
     flawd::TransformerModel boundary_model_b(config);
