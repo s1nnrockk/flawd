@@ -68,7 +68,7 @@ def main() -> int:
         wrong_merges = list(tokenizer.merges)
         replacement_pair = next(
             pair for pair in ((0, 0), (1, 1), (2, 2), (3, 3))
-            if pair not in wrong_merges[:-1]
+            if pair not in wrong_merges
         )
         wrong_merges[-1] = replacement_pair
         wrong_tokenizer_path = directory / "wrong-tokenizer.bpe"
