@@ -57,7 +57,7 @@ ctest --test-dir build -C Release --output-on-failure
 Train a small model and save its checkpoint:
 
 ```powershell
-.\build\Release\flawd_train.exe .\python\tiny.tokens .\model.flawd 1
+.\build\Release\flawd_train.exe .\python\train.tokens .\model.flawd 1 .\python\validation.tokens
 ```
 
 The initial configuration is intentionally tiny and CPU-oriented. The CLI reports held-out validation loss when a separate validation token file is supplied. After training,
