@@ -34,7 +34,7 @@ training duration, and rigorous evaluation.
 ## Python data pipeline
 
 - UTF-8 byte tokenizer and deterministic byte-pair tokenizer with reserved PAD/BOS/EOS IDs.
-- Portable BPE merge-table files shared by Python corpus export and native C++ inference.
+- Portable BPE merge-table files shared by Python corpus export and native C++ inference; FLAWDTOK v3 and model checkpoints carry a fingerprint to prevent mismatched tokenizers.
 - JSONL validation, normalization, deduplication, and deterministic splits.
 - Role-tagged conversation serialization with code formatting preservation.
 - FLAWDTOK v2 export with assistant-only loss masks and provenance manifest.
