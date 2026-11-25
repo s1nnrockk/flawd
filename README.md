@@ -2,45 +2,69 @@
 
 **FLAWD** is an independent AI project built with **C++ and Python**.
 
-The goal is to build and train our own language model, run inference locally, and later provide a hosted API with free and paid plans.
+The goal is to build and train our own language model, run inference locally, and
+only later provide a hosted API and website. The project does not depend on
+third-party hosted AI APIs for its own model inference.
 
-## Principles
+## Current foundation
 
-- No third-party hosted AI APIs for model inference.
-- Build the neural-network components ourselves and understand each layer.
-- Start small so development is possible on modest hardware.
-- Keep model inference separate from accounts, API keys, usage limits, and billing.
+- C++17 tensor engine with elementwise operations, matrix multiplication,
+  transpose, ReLU, and softmax.
+- C++ tests registered with CTest.
+- Python package with a lossless UTF-8 byte tokenizer.
+- JSONL dataset validation helpers.
+- GitHub Actions CI for Windows C++ and Python checks.
 
-## Current status
-
-🚧 Early development. The first milestone is a small C++ tensor library, followed by tests and Python training utilities.
+The byte tokenizer is a simple baseline, not the final tokenizer. A trainable
+subword tokenizer and the actual neural model come in later milestones.
 
 ## Repository layout
 
-- `engine/` — C++ numerical and inference engine.
-- `python/` — Python training and tokenizer tools.
-- `server/` — future account and API service.
-- `tests/` — automated tests.
+- engine/ — C++ numerical and inference engine.
+- python/flawd/ — Python tokenizer and dataset utilities.
+- python/tests/ — Python unit tests.
+- tests/cpp/ — C++ unit tests.
+- data/ — dataset format documentation; large datasets stay outside Git.
+- docs/ — architecture and development notes.
+- .github/workflows/ — automated checks.
 
-## Build
+## Build the C++ foundation
 
 Requirements: CMake 3.20+ and a C++17 compiler.
 
 ```powershell
 cmake -S . -B build
 cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+.\build\Release\flawd_demo.exe
 ```
 
-## Roadmap
+## Run Python tests
 
-1. Tensor basics and unit tests.
-2. Automatic differentiation.
-3. Tokenizer and dataset pipeline.
-4. Small Transformer model.
-5. Training and evaluation.
-6. Local inference.
-7. Hosted API, accounts, usage limits, and subscription plans.
+From the repository root:
 
-## Security
+```powershell
+cd python
+python -m unittest discover -s tests -v
+```
 
-Never commit API secrets, passwords, private datasets, or user data.
+## Development order
+
+1. Complete and verify the core engine.
+2. Expand tokenizer and dataset tooling.
+3. Add automatic differentiation and neural-network layers.
+4. Implement a small Transformer.
+5. Build training, checkpointing, and evaluation.
+6. Add local inference and optimize it.
+7. Build the hosted API and website after the model runtime is stable.
+
+## Hardware target
+
+The first model and tools will be designed to run in small experiments on
+consumer hardware. Large-scale model training requires substantially more
+memory and compute; the project will not pretend otherwise.
+
+## Security and data
+
+Never commit passwords, private keys, API secrets, private datasets, or user
+personal data. Keep dataset source and usage permissions documented.
