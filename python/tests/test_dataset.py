@@ -68,7 +68,7 @@ class DatasetTests(unittest.TestCase):
             self.assertEqual(record["sources"], ["OpenAssistant/oasst1", "Dolly"])
             self.assertEqual(record["licenses"], ["Apache-2.0", "CC-BY-SA-3.0"])
             self.assertEqual(record["languages"], ["en"])
-            self.assertEqual(record["categories"], ["qa"])
+            self.assertEqual(record["category"], "qa")
 
     def test_train_validation_split_keeps_record_provenance(self):
         with tempfile.TemporaryDirectory() as directory:
