@@ -47,5 +47,25 @@ class OASSTImportTests(unittest.TestCase):
         }
         self.assertTrue(_usable(row, {"en"}))
 
+    def test_reads_arrow_struct_label_columns(self):
+        from flawd.oasst_import import _usable
+        row = {
+            "message_id": "a1", "role": "assistant", "text": "Answer",
+            "lang": "en", "review_result": True, "deleted": False,
+            "labels": {"name": ["spam", "pii"], "value": [0.0, 1.0], "count": [3, 3]},
+        }
+        self.assertFalse(_usable(row, {"en"}))
+
+    def test_deduplication_keeps_validation_copy_only(self):
+        from flawd.oasst_import import _deduplicate_splits
+        record = {"messages": [
+            {"role": "user", "content": "Question"},
+            {"role": "assistant", "content": "Answer"},
+        ]}
+        train, validation, stats = _deduplicate_splits([record, record], [record])
+        self.assertEqual(train, [])
+        self.assertEqual(validation, [record])
+        self.assertEqual(stats["train_duplicates_removed"], 2)
+
 if __name__ == "__main__":
     unittest.main()
