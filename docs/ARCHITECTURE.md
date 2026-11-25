@@ -39,6 +39,10 @@ multi-head production architecture.
 6. Save a versioned model checkpoint.
 7. Add a separate inference/generation runtime and evaluate on held-out data.
 
+## Assistant behavior direction
+
+See [ASSISTANT_BEHAVIOR.md](ASSISTANT_BEHAVIOR.md) for FLAWD's Claude-inspired product-quality goals, dataset requirements, and staged path from pretraining to instruction tuning and evaluation. These are target qualities, not claims about the current tiny model.
+
 ## Engineering constraints
 
 - Keep the baseline dependency-light.
