@@ -32,6 +32,20 @@ private:
     std::vector<Scalar> biases_;
 };
 
+class Embedding {
+public:
+    Embedding(std::size_t vocabulary_size, std::size_t embedding_size, std::uint32_t seed = 123);
+    ScalarVector forward(std::size_t token_id) const;
+    std::vector<Scalar> parameters();
+    std::size_t vocabulary_size() const noexcept;
+    std::size_t embedding_size() const noexcept;
+
+private:
+    std::size_t vocabulary_size_;
+    std::size_t embedding_size_;
+    std::vector<Scalar> weights_;
+};
+
 class ReLU final : public Layer {
 public:
     ScalarVector forward(const ScalarVector& input) override;
