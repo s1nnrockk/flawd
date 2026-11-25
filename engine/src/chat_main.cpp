@@ -60,7 +60,9 @@ int main(int argc, char** argv) {
             bpe_tokenizer = std::make_unique<flawd::ByteBPETokenizer>(argv[4]);
             if (bpe_tokenizer->vocabulary_size() != config.vocabulary_size)
                 throw std::invalid_argument("BPE tokenizer vocabulary does not match checkpoint");
-        } else if (config.vocabulary_size != 259) {
+            if (bpe_tokenizer->fingerprint() != config.tokenizer_fingerprint)
+                throw std::invalid_argument("BPE tokenizer file does not match the checkpoint tokenizer");
+        } else if (config.vocabulary_size != 259 || config.tokenizer_fingerprint != 0) {
             throw std::invalid_argument("This checkpoint requires its matching .bpe tokenizer file");
         }
         flawd::TransformerModel model(config);
