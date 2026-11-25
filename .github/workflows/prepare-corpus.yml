@@ -53,8 +53,8 @@ jobs:
       - name: Validate, normalize, and deduplicate corpus splits
         working-directory: python
         run: |
-          python -m flawd.dataset_cli training-run/raw-train.jsonl training-run/train.jsonl
-          python -m flawd.dataset_cli training-run/raw-validation.jsonl training-run/validation.jsonl
+          python -m flawd.dataset_cli training-run/raw-train.jsonl training-run/train.jsonl --shuffle-seed 2026
+          python -m flawd.dataset_cli training-run/raw-validation.jsonl training-run/validation.jsonl --shuffle-seed 2027
           python -c "from flawd.dataset import validate_jsonl; a=validate_jsonl('training-run/train.jsonl'); b=validate_jsonl('training-run/validation.jsonl'); print({'train_records':a,'validation_records':b}); assert a > 100 and b > 10"
 
       - name: Fit BPE on training data only and export token files
