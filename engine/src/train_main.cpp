@@ -48,7 +48,7 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
         throw std::runtime_error("Token file payload size overflows the file format");
     const std::uint64_t expected_size = 24 + count * bytes_per_token;
     input.seekg(0, std::ios::end);
-    const auto actual_size = input.tellg();
+    const auto actual_size = static_cast<std::streamoff>(input.tellg());
     if (actual_size < 0 || static_cast<std::uint64_t>(actual_size) != expected_size)
         throw std::runtime_error("Token file size does not match its header");
     input.seekg(24, std::ios::beg);
