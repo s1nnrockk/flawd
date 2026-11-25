@@ -31,6 +31,19 @@ void ModelConfig::validate() const {
         feed_forward_size == 0 || layer_count == 0 || attention_heads == 0 ||
         embedding_size % attention_heads != 0)
         throw std::invalid_argument("Transformer dimensions must be positive and embedding size must be divisible by attention heads");
+
+    const long double width = static_cast<long double>(embedding_size);
+    const long double vocabulary = static_cast<long double>(vocabulary_size);
+    const long double context = static_cast<long double>(context_length);
+    const long double feed_forward = static_cast<long double>(feed_forward_size);
+    const long double layers = static_cast<long double>(layer_count);
+    const long double estimated_parameters =
+        2.0L * vocabulary * width + context * width + vocabulary +
+        layers * (4.0L * width * width + 2.0L * width * feed_forward +
+                  12.0L * width + feed_forward) + 2.0L * width;
+    if (estimated_parameters >
+        static_cast<long double>(std::numeric_limits<std::size_t>::max()))
+        throw std::length_error("Transformer dimensions exceed addressable parameter storage");
 }
 
 CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::size_t head_count,
