@@ -56,7 +56,7 @@ python -m flawd.corpus_cli train.jsonl train.tokens --tokenizer tokenizer.bpe
 python -m flawd.corpus_cli validation.jsonl validation.tokens --tokenizer tokenizer.bpe
 cd ..
 ```
-The portable tokenizer file is shared by Python data preparation and native C++ inference. BPE training uses a bounded 250 KB sample and a 512-token target vocabulary by default to keep preparation manageable on CPU.
+The portable tokenizer file is shared by Python data preparation and native C++ inference. BPE token streams use FLAWDTOK v3, which embeds a tokenizer fingerprint; training and inference reject a mismatched vocabulary file. BPE training uses a bounded 250 KB sample and a 512-token target vocabulary by default to keep preparation manageable on CPU.
 
 Build FLAWD:
 
