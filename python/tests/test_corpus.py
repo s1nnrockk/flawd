@@ -47,6 +47,17 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(output.read_bytes(), b"previous-valid-output")
             self.assertFalse(list(Path(directory).glob("existing.tokens.*.tmp")))
 
+    def test_manifest_path_cannot_overwrite_source_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "dataset.tokens.json"
+            output = Path(directory) / "dataset.tokens"
+            original = json.dumps({"text": "keep this source"}) + "\\n"
+            source.write_text(original, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "manifest paths"):
+                tokenize_jsonl(source, output)
+            self.assertEqual(source.read_text(encoding="utf-8"), original)
+            self.assertFalse(output.exists())
+
     def test_invalid_input_does_not_leave_partial_token_file(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "broken.jsonl"
