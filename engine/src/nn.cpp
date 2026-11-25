@@ -74,6 +74,61 @@ ScalarVector ReLU::forward(const ScalarVector& input) {
 }
 std::vector<Scalar> ReLU::parameters() { return {}; }
 
+
+LayerNorm::LayerNorm(std::size_t feature_size, float epsilon)
+    : feature_size_(feature_size), epsilon_(epsilon) {
+    if (feature_size == 0) throw std::invalid_argument("LayerNorm feature size must be non-zero");
+    if (!(epsilon > 0.0F) || !std::isfinite(epsilon))
+        throw std::invalid_argument("LayerNorm epsilon must be finite and positive");
+    gamma_.reserve(feature_size);
+    beta_.reserve(feature_size);
+    for (std::size_t i = 0; i < feature_size; ++i) {
+        gamma_.emplace_back(1.0F);
+        beta_.emplace_back(0.0F);
+    }
+}
+ScalarVector LayerNorm::forward(const ScalarVector& input) {
+    if (input.size() != feature_size_)
+        throw std::invalid_argument("LayerNorm input size mismatch");
+    Scalar mean(0.0F);
+    for (const auto& value : input) mean = mean + value;
+    mean = mean / Scalar(static_cast<float>(feature_size_));
+    Scalar variance(0.0F);
+    for (const auto& value : input) {
+        const auto centered = value - mean;
+        variance = variance + centered * centered;
+    }
+    variance = variance / Scalar(static_cast<float>(feature_size_));
+    const auto inverse_std = Scalar(1.0F) / flawd::sqrt(variance + Scalar(epsilon_));
+    ScalarVector output;
+    output.reserve(feature_size_);
+    for (std::size_t i = 0; i < feature_size_; ++i)
+        output.push_back((input[i] - mean) * inverse_std * gamma_[i] + beta_[i]);
+    return output;
+}
+std::vector<Scalar> LayerNorm::parameters() {
+    std::vector<Scalar> result = gamma_;
+    result.insert(result.end(), beta_.begin(), beta_.end());
+    return result;
+}
+
+ScalarVector softmax(const ScalarVector& logits) {
+    if (logits.empty()) throw std::invalid_argument("Softmax expects non-empty logits");
+    float maximum = logits.front().value();
+    for (const auto& value : logits) if (value.value() > maximum) maximum = value.value();
+    Scalar denominator(0.0F);
+    ScalarVector exponentials;
+    exponentials.reserve(logits.size());
+    for (const auto& value : logits) {
+        exponentials.push_back(flawd::exp(value - Scalar(maximum)));
+        denominator = denominator + exponentials.back();
+    }
+    ScalarVector probabilities;
+    probabilities.reserve(logits.size());
+    for (const auto& value : exponentials) probabilities.push_back(value / denominator);
+    return probabilities;
+}
+
 ScalarVector Tanh::forward(const ScalarVector& input) {
     ScalarVector output;
     output.reserve(input.size());
