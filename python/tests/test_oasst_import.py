@@ -29,5 +29,23 @@ class OASSTImportTests(unittest.TestCase):
         ]
         self.assertIsNone(_best_path(rows, {"en"}))
 
+    def test_rejects_flagged_quality_labels(self):
+        from flawd.oasst_import import _usable
+        row = {
+            "message_id": "a1", "role": "assistant", "text": "Answer",
+            "lang": "en", "review_result": True, "deleted": False,
+            "labels": {"spam": {"value": 1.0}, "pii": {"value": 0.0}},
+        }
+        self.assertFalse(_usable(row, {"en"}))
+
+    def test_accepts_clean_label_scores(self):
+        from flawd.oasst_import import _usable
+        row = {
+            "message_id": "a1", "role": "assistant", "text": "Answer",
+            "lang": "en", "review_result": True, "deleted": False,
+            "labels": {"spam": {"value": 0.0}, "pii": {"value": 0.0}},
+        }
+        self.assertTrue(_usable(row, {"en"}))
+
 if __name__ == "__main__":
     unittest.main()
