@@ -21,7 +21,7 @@ UTF-8 JSON Lines. Plain-text records are supported:
 {"text":"A training passage with documented usage rights."}
 ```
 
-Conversation-format records use role-tagged messages:
+Conversation-format records use role-tagged messages. A conversation may start with one system message, then alternates user and assistant turns, and must end with an assistant response. Reserved role markers inside message content are rejected. Example:
 
 ```json
 {"messages":[{"role":"system","content":"Be helpful and accurate."},{"role":"user","content":"Explain this function."},{"role":"assistant","content":"It returns a value."}]}
