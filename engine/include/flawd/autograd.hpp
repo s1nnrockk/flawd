@@ -10,6 +10,7 @@ public:
     float grad() const noexcept;
     void set_value(float value);
     void zero_grad() noexcept;
+    void scale_grad(float factor) noexcept;
     void backward() const;
     friend Scalar operator+(const Scalar&, const Scalar&);
     friend Scalar operator-(const Scalar&, const Scalar&);
