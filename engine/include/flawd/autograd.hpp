@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -22,7 +21,6 @@ public:
     friend Scalar tanh(const Scalar& input);
     friend Scalar relu(const Scalar& input);
     friend Scalar exp(const Scalar& input);
-Scalar sqrt(const Scalar& input);
     friend Scalar sqrt(const Scalar& input);
 
 private:
@@ -35,5 +33,6 @@ private:
 Scalar tanh(const Scalar& input);
 Scalar relu(const Scalar& input);
 Scalar exp(const Scalar& input);
+Scalar sqrt(const Scalar& input);
 
 } // namespace flawd
