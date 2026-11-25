@@ -144,8 +144,9 @@ def build_clean_dataset(
     validation_destination: str | Path | None = None,
     validation_ratio: float = 0.05,
     seed: int = 2026,
+    shuffle_seed: int | None = None,
 ) -> dict[str, int | float]:
-    """Normalize and exact-deduplicate records, optionally making a reproducible split."""
+    """Normalize/deduplicate records, optionally split and deterministically shuffle them."""
     positions: dict[str, int] = {}
     records: list[dict[str, Any]] = []
     input_count = 0
