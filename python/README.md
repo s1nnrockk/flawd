@@ -57,5 +57,5 @@ manifest. Record real provenance and permissions rather than guessing them.
 ## Tokenizer
 
 ByteTokenizer maps UTF-8 bytes to IDs 0–255 and reserves 256, 257, and 258 for
-PAD, BOS, and EOS. EOS is appended to each exported text record. This transparent
+PAD, BOS, and EOS. Each exported record is wrapped with BOS and EOS tokens. This transparent
 baseline can later be replaced by a subword tokenizer.
