@@ -72,7 +72,19 @@ def main() -> int:
         )
         wrong_merges[-1] = replacement_pair
         wrong_tokenizer_path = directory / "wrong-tokenizer.bpe"
-        ByteBPETokenizer(wrong_merges).save(wrong_tokenizer_path)
+        wrong_tokenizer = ByteBPETokenizer(wrong_merges)
+        wrong_tokenizer.save(wrong_tokenizer_path)
+        wrong_validation_tokens = directory / "wrong-validation.tokens"
+        tokenize_jsonl(validation_jsonl, wrong_validation_tokens,
+                       tokenizer_path=wrong_tokenizer_path)
+        validation_mismatch = subprocess.run(
+            [str(train_exe), str(train_tokens), str(directory / "invalid.flawd"),
+             "1", str(wrong_validation_tokens)],
+            capture_output=True, text=True, timeout=30,
+        )
+        if (validation_mismatch.returncode == 0
+                or "tokenizer fingerprints do not match" not in validation_mismatch.stderr):
+            raise RuntimeError("Native trainer accepted validation data from a different BPE tokenizer")
         mismatch = subprocess.run(
             [str(chat_exe), str(checkpoint), "0", "40", str(wrong_tokenizer_path)],
             input="hello\\n\\n", capture_output=True, text=True, timeout=30,
