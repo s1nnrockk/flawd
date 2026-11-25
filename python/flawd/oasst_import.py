@@ -84,7 +84,7 @@ def _best_path(rows: list[dict[str, Any]], languages: set[str]) -> list[dict[str
     return messages
 
 
-def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], split_name: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
     trees: dict[str, list[dict[str, Any]]] = defaultdict(list)
     skipped_rows = 0
     for row in dataset_split:
@@ -104,7 +104,7 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str]) 
         output.append({
             "messages": messages,
             "source": DATASET_ID,
-            "source_split": str(tree_rows[0].get("_flawd_split", "unknown")),
+            "source_split": split_name,
             "languages": sorted({
                 str(row.get("lang") or "").lower().split("-")[0]
                 for row in tree_rows if row.get("lang")
@@ -149,8 +149,8 @@ def main() -> int:
     if "train" not in dataset or "validation" not in dataset:
         raise SystemExit("Expected official train and validation splits; refusing to create a random split.")
 
-    train_rows, train_stats = convert_split(dataset["train"], languages)
-    validation_rows, validation_stats = convert_split(dataset["validation"], languages)
+    train_rows, train_stats = convert_split(dataset["train"], languages, "train")
+    validation_rows, validation_stats = convert_split(dataset["validation"], languages, "validation")
 
     if args.seed_jsonl:
         from .dataset import read_jsonl
