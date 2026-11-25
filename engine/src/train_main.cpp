@@ -40,12 +40,18 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     const auto count = read_little_endian<std::uint64_t>(input);
     if (version != 1 && version != 2) throw std::runtime_error("Unsupported token file version");
     if (vocabulary != expected_vocab) throw std::runtime_error("Token file vocabulary does not match model");
+    if (count < 2) throw std::runtime_error("Token file must contain at least two tokens");
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
+    const std::uint64_t bytes_per_token = version == 2 ? 3 : 2;
+    if (count > (static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max()) - 24) /
+                    bytes_per_token)
+        throw std::runtime_error("Token file payload is too large");
 
     TokenCorpus corpus;
     corpus.tokens.reserve(static_cast<std::size_t>(count));
     corpus.loss_mask.reserve(static_cast<std::size_t>(count));
+    std::size_t supervised = 0;
     for (std::uint64_t i = 0; i < count; ++i) {
         const auto token = read_little_endian<std::uint16_t>(input);
         const auto flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
@@ -53,9 +59,11 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
         if (flag > 1) throw std::runtime_error("Token loss mask must be 0 or 1");
         corpus.tokens.push_back(token);
         corpus.loss_mask.push_back(flag);
+        supervised += flag;
     }
     if (input.peek() != std::char_traits<char>::eof())
         throw std::runtime_error("Token file contains unexpected trailing data");
+    if (supervised == 0) throw std::runtime_error("Token file contains no supervised targets");
     return corpus;
 }
 }
@@ -85,18 +93,52 @@ int main(int argc, char** argv) {
         flawd::TransformerModel model(config);
         if (argc == 6) model.load_checkpoint(argv[5]);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
-        const auto stats = trainer.train(training.tokens, training.loss_mask, epochs);
-        flawd::TrainingStats validation_stats;
-        if (argc >= 5)
-            validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
-        model.save_checkpoint(argv[2]);
 
+        constexpr std::size_t early_stopping_patience = 3;
+        constexpr double minimum_improvement = 1.0e-4;
+        std::size_t stale_epochs = 0;
+        std::size_t total_steps = 0;
+        double total_loss = 0.0;
+        double best_validation_loss = std::numeric_limits<double>::infinity();
+        flawd::TrainingStats best_validation_stats;
+
+        for (std::size_t epoch = 1; epoch <= epochs; ++epoch) {
+            const auto epoch_stats = trainer.train(training.tokens, training.loss_mask, 1);
+            total_steps += epoch_stats.steps;
+            total_loss += epoch_stats.average_loss * static_cast<double>(epoch_stats.steps);
+            std::cout << "Epoch " << epoch << "/" << epochs
+                      << " | training loss: " << epoch_stats.average_loss;
+
+            if (argc >= 5) {
+                const auto validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
+                std::cout << " | validation loss: " << validation_stats.average_loss;
+                if (validation_stats.average_loss < best_validation_loss - minimum_improvement) {
+                    best_validation_loss = validation_stats.average_loss;
+                    best_validation_stats = validation_stats;
+                    stale_epochs = 0;
+                    model.save_checkpoint(argv[2]);
+                    std::cout << " | best checkpoint saved";
+                } else {
+                    ++stale_epochs;
+                }
+                std::cout << '\n';
+                if (stale_epochs >= early_stopping_patience) {
+                    std::cout << "Early stopping: validation loss did not improve for "
+                              << early_stopping_patience << " epochs.\n";
+                    break;
+                }
+            } else {
+                std::cout << '\n';
+            }
+        }
+
+        if (argc < 5) model.save_checkpoint(argv[2]);
         std::cout << "FLAWD training complete\n"
-                  << "Steps: " << stats.steps << "\n"
-                  << "Training loss: " << stats.average_loss << "\n";
+                  << "Steps: " << total_steps << "\n"
+                  << "Training loss: " << (total_loss / static_cast<double>(total_steps)) << "\n";
         if (argc >= 5) {
-            std::cout << "Validation steps: " << validation_stats.steps << "\n"
-                      << "Validation loss: " << validation_stats.average_loss << "\n";
+            std::cout << "Best validation steps: " << best_validation_stats.steps << "\n"
+                      << "Best validation loss: " << best_validation_loss << "\n";
         }
         std::cout << "Checkpoint: " << argv[2] << "\n";
         return 0;
