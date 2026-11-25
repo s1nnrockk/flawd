@@ -71,7 +71,7 @@ class CorpusTests(unittest.TestCase):
                 {"role": "assistant", "content": "Здравствуйте"},
                 {"role": "user", "content": "Ещё вопрос"},
                 {"role": "assistant", "content": "Ответ готов"},
-            ]}, ensure_ascii=False) + "\\n", encoding="utf-8")
+            ]}, ensure_ascii=False) + "\n", encoding="utf-8")
             tokenize_jsonl(source, output)
             payload = output.read_bytes()
             _, version, _, count = struct.unpack("<8sIIQ", payload[:24])
