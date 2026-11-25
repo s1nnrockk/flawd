@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
 
         flawd::ModelConfig config;
         config.vocabulary_size = 259;
-        config.context_length = 16;
+        config.context_length = 64;
         config.embedding_size = 8;
         config.feed_forward_size = 16;
         config.layer_count = 1;
