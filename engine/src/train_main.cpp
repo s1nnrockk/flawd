@@ -44,9 +44,15 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
     const std::uint64_t bytes_per_token = version == 2 ? 3 : 2;
-    if (count > (static_cast<std::uint64_t>(std::numeric_limits<std::streamsize>::max()) - 24) /
-                    bytes_per_token)
-        throw std::runtime_error("Token file payload is too large");
+    if (count > (std::numeric_limits<std::uint64_t>::max() - 24) / bytes_per_token)
+        throw std::runtime_error("Token file payload size overflows the file format");
+    const std::uint64_t expected_size = 24 + count * bytes_per_token;
+    input.seekg(0, std::ios::end);
+    const auto actual_size = input.tellg();
+    if (actual_size < 0 || static_cast<std::uint64_t>(actual_size) != expected_size)
+        throw std::runtime_error("Token file size does not match its header");
+    input.seekg(24, std::ios::beg);
+    if (!input) throw std::runtime_error("Cannot seek to token payload");
 
     TokenCorpus corpus;
     corpus.tokens.reserve(static_cast<std::size_t>(count));
