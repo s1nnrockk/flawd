@@ -1,6 +1,7 @@
 #include "flawd/nn.hpp"
 
 #include <cmath>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <utility>
@@ -228,5 +229,44 @@ void Adam::set_learning_rate(float learning_rate) {
     learning_rate_ = learning_rate;
 }
 float Adam::learning_rate() const noexcept { return learning_rate_; }
+std::uint64_t Adam::step_count() const noexcept {
+    return static_cast<std::uint64_t>(step_count_);
+}
+AdamState Adam::state() const {
+    AdamState result;
+    result.learning_rate = learning_rate_;
+    result.beta1 = beta1_;
+    result.beta2 = beta2_;
+    result.epsilon = epsilon_;
+    result.step_count = static_cast<std::uint64_t>(step_count_);
+    result.first_moment = first_moment_;
+    result.second_moment = second_moment_;
+    return result;
+}
+void Adam::load_state(const AdamState& state) {
+    if (!(state.learning_rate > 0.0F) || !std::isfinite(state.learning_rate) ||
+        !(state.beta1 > 0.0F && state.beta1 < 1.0F) ||
+        !(state.beta2 > 0.0F && state.beta2 < 1.0F) ||
+        !(state.epsilon > 0.0F) || !std::isfinite(state.epsilon))
+        throw std::invalid_argument("Adam checkpoint contains invalid hyperparameters");
+    if (state.step_count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
+        throw std::length_error("Adam checkpoint step count exceeds this platform");
+    if (state.first_moment.size() != parameters_.size() ||
+        state.second_moment.size() != parameters_.size())
+        throw std::invalid_argument("Adam checkpoint moment count does not match model parameters");
+    for (std::size_t index = 0; index < parameters_.size(); ++index) {
+        if (!std::isfinite(state.first_moment[index]) ||
+            !std::isfinite(state.second_moment[index]) ||
+            state.second_moment[index] < 0.0F)
+            throw std::invalid_argument("Adam checkpoint contains invalid moment values");
+    }
+    learning_rate_ = state.learning_rate;
+    beta1_ = state.beta1;
+    beta2_ = state.beta2;
+    epsilon_ = state.epsilon;
+    step_count_ = static_cast<std::size_t>(state.step_count);
+    first_moment_ = state.first_moment;
+    second_moment_ = state.second_moment;
+}
 
 } // namespace flawd
