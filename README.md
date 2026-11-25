@@ -30,7 +30,7 @@ GitHub Actions builds the C++ targets and runs CTest and Python unit tests on Wi
 
 ## Quick start: prepare a tiny training corpus
 
-Create a UTF-8 JSONL file with one text record per line:
+Create a UTF-8 JSONL file with one text record per line for ordinary language-model pretraining:
 
 ```json
 {"text":"The first short training passage."}
@@ -61,7 +61,15 @@ Train a small model and save its checkpoint:
 .\build\Release\flawd_train.exe .\python\train.tokens .\model.flawd 1 .\python\validation.tokens
 ```
 
-The initial configuration is intentionally tiny and CPU-oriented. The CLI reports held-out validation loss when a separate validation token file is supplied. After training,
+For assistant-style training, use conversation records instead of plain text:
+
+```json
+{"messages":[{"role":"system","content":"Be helpful and accurate."},{"role":"user","content":"Explain what a loop does."},{"role":"assistant","content":"A loop repeats a block of instructions while a condition holds, or for each item in a sequence."}]}
+```
+
+The exporter stores assistant-only loss masks in FLAWDTOK v2. User and system messages remain visible to the model as context; assistant responses and the final end-of-turn token are training targets. Keep conversations complete and ensure every record contains both a user and assistant message.
+
+The initial configuration is intentionally tiny and CPU-oriented. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI reports held-out validation loss when a separate validation token file is supplied. After training,
 start the local text-generation CLI:
 
 ```powershell
