@@ -61,6 +61,28 @@ int main() {
     if (!rejected_invalid_mask)
         throw std::runtime_error("Trainer accepted an invalid loss mask value");
 
+    flawd::TransformerModel accumulated_model(config);
+    flawd::LanguageModelTrainer accumulated_trainer(accumulated_model);
+    const auto accumulated_stats = accumulated_trainer.train(
+        std::vector<std::size_t>{10, 11, 12, 13, 14}, 1, 1, 3);
+    if (accumulated_stats.steps != 4 || !std::isfinite(accumulated_stats.average_loss))
+        throw std::runtime_error("Gradient accumulation changed target accounting");
+    if (accumulated_trainer.steps() != 2)
+        throw std::runtime_error("Gradient accumulation did not produce the expected two optimizer updates");
+
+    flawd::TransformerModel masked_accumulated_model(config);
+    flawd::LanguageModelTrainer masked_accumulated_trainer(masked_accumulated_model);
+    const auto masked_accumulated = masked_accumulated_trainer.train(
+        masked_tokens, mask, 1, 1, 4);
+    if (masked_accumulated.steps != 2 || masked_accumulated_trainer.steps() != 1)
+        throw std::runtime_error("Masked gradient accumulation mishandled a partial final batch");
+
+    bool rejected_zero_accumulation = false;
+    try { accumulated_trainer.train(masked_tokens, 1, 1, 0); }
+    catch (const std::invalid_argument&) { rejected_zero_accumulation = true; }
+    if (!rejected_zero_accumulation)
+        throw std::runtime_error("Trainer accepted zero gradient accumulation");
+
     flawd::TransformerModel boundary_model_a(config);
     flawd::TransformerModel boundary_model_b(config);
     flawd::LanguageModelTrainer boundary_trainer_a(boundary_model_a);
