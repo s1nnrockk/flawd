@@ -49,7 +49,7 @@ def main() -> int:
 
         training = subprocess.run(
             [str(train_exe), str(train_tokens), str(checkpoint), "1", str(validation_tokens),
-             "-", "96", "8", "16", "1", "4"],
+             "-", "64", "8", "16", "1", "4"],
             check=True, capture_output=True, text=True, timeout=120,
         )
         if "FLAWD training complete" not in training.stdout or not checkpoint.is_file():
