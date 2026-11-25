@@ -1,0 +1,91 @@
+name: FLAWD corpus preparation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Download, filter, and tokenize licensed datasets
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: python/pyproject.toml
+
+      - name: Install dataset tooling
+        working-directory: python
+        run: python -m pip install -e ".[datasets]"
+
+      - name: Download and combine OASST1, Dolly, and FLAWD seed
+        working-directory: python
+        run: >-
+          python -m flawd.oasst_import
+          --languages ru,en
+          --include-dolly
+          --seed-jsonl ../data/seed/flawd-instructions-v2.jsonl
+          --train-output training-run/raw-train.jsonl
+          --validation-output training-run/raw-validation.jsonl
+
+      - name: Validate, normalize, and deduplicate corpus splits
+        working-directory: python
+        run: |
+          python -m flawd.dataset_cli training-run/raw-train.jsonl training-run/train.jsonl
+          python -m flawd.dataset_cli training-run/raw-validation.jsonl training-run/validation.jsonl
+          python -c "from flawd.dataset import validate_jsonl; a=validate_jsonl('training-run/train.jsonl'); b=validate_jsonl('training-run/validation.jsonl'); print({'train_records':a,'validation_records':b}); assert a > 100 and b > 10"
+
+      - name: Fit BPE on training data only and export token files
+        working-directory: python
+        run: |
+          python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 2048 --max-training-bytes 2000000
+          python -m flawd.corpus_cli training-run/train.jsonl training-run/train.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined licensed instruction corpus; train split" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
+          python -m flawd.corpus_cli training-run/validation.jsonl training-run/validation.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined held-out validation corpus" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
+
+      - name: Write corpus manifest
+        working-directory: python
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from flawd.dataset import validate_jsonl
+          root = Path("training-run")
+          manifest = {
+              "project": "FLAWD",
+              "sources": [
+                  {"id": "OpenAssistant/oasst1", "license": "Apache-2.0", "languages": ["ru", "en"]},
+                  {"id": "databricks/databricks-dolly-15k", "license": "CC-BY-SA-3.0", "languages": ["en"]},
+                  {"id": "FLAWD curated seed v2", "license": "MIT", "languages": ["ru", "en"]}
+              ],
+              "train_records": validate_jsonl(root / "train.jsonl"),
+              "validation_records": validate_jsonl(root / "validation.jsonl"),
+              "tokenizer": "BPE; vocab target 2048; trained on train split only",
+              "note": "Prepared corpus artifact; not a trained model checkpoint."
+          }
+          (root / "CORPUS_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(json.dumps(manifest, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload prepared corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: flawd-prepared-corpus-${{ github.run_number }}
+          path: |
+            python/training-run/train.jsonl
+            python/training-run/validation.jsonl
+            python/training-run/train.tokens
+            python/training-run/validation.tokens
+            python/training-run/tokenizer.bpe
+            python/training-run/train.tokens.json
+            python/training-run/validation.tokens.json
+            python/training-run/CORPUS_MANIFEST.json
+          if-no-files-found: error
+          retention-days: 30
