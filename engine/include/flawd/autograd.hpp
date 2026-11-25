@@ -22,6 +22,7 @@ public:
     friend Scalar relu(const Scalar& input);
     friend Scalar exp(const Scalar& input);
     friend Scalar sqrt(const Scalar& input);
+    friend Scalar log(const Scalar& input);
 
 private:
     struct Node;
