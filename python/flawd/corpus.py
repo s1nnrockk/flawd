@@ -10,7 +10,7 @@ _MAGIC = b"FLAWDTOK"
 _VERSION = 2
 _HEADER = struct.Struct("<8sIIQ")
 _TOKEN = struct.Struct("<HB")
-_ROLE_MARKERS = ("<|system|>\\n", "<|user|>\\n", "<|assistant|>\\n")
+_ROLE_MARKERS = ("<|system|>\n", "<|user|>\n", "<|assistant|>\n")
 
 
 def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list[int]]:
@@ -35,10 +35,10 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
         next_positions = [text.find(candidate, content_start) for candidate in _ROLE_MARKERS]
         next_positions = [value for value in next_positions if value >= 0]
         content_end = min(next_positions) if next_positions else len(text)
-        if marker == "<|assistant|>\\n":
+        if marker == "<|assistant|>\n":
             start_byte = len(text[:content_start].encode("utf-8"))
             end_byte = len(text[:content_end].encode("utf-8"))
-            mask[start_byte:end_byte] = b"\\x01" * (end_byte - start_byte)
+            mask[start_byte:end_byte] = b"\x01" * (end_byte - start_byte)
         cursor = content_end
 
     body = tokenizer.encode(text)
@@ -91,7 +91,7 @@ def tokenize_jsonl(
         "language": language,
     }
     output_path.with_suffix(output_path.suffix + ".json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\\n",
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     return {"records": record_count, "tokens": token_count, "supervised_tokens": supervised_tokens}
