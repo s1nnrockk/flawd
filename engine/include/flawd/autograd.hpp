@@ -13,7 +13,7 @@ public:
     float grad() const noexcept;
     void set_value(float value);
     void zero_grad() noexcept;
-    void backward();
+    void backward() const;
 
     friend Scalar operator+(const Scalar& left, const Scalar& right);
     friend Scalar operator-(const Scalar& left, const Scalar& right);
