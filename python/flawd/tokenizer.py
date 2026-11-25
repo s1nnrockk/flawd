@@ -33,7 +33,7 @@ class ByteTokenizer:
             raise TypeError("text must be a string")
         return self.encode_bytes(text.encode("utf-8"), add_bos=add_bos, add_eos=add_eos)
 
-    def decode(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> str:
+    def decode_bytes(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> bytes:
         data = bytearray()
         for token_id in token_ids:
             if not isinstance(token_id, int) or not 0 <= token_id < self.VOCAB_SIZE:
@@ -42,7 +42,12 @@ class ByteTokenizer:
                 data.append(token_id)
             elif not skip_special_tokens:
                 raise ValueError("special tokens cannot be decoded as UTF-8 bytes")
-        return data.decode("utf-8", errors="replace")
+        return bytes(data)
+
+    def decode(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> str:
+        return self.decode_bytes(token_ids, skip_special_tokens=skip_special_tokens).decode(
+            "utf-8", errors="replace"
+        )
 
 
 class ByteBPETokenizer(ByteTokenizer):
@@ -146,7 +151,7 @@ class ByteBPETokenizer(ByteTokenizer):
             tokens.append(self.EOS_ID)
         return tokens
 
-    def decode(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> str:
+    def decode_bytes(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> bytes:
         data = bytearray()
         for token_id in token_ids:
             if not isinstance(token_id, int) or not 0 <= token_id < self.VOCAB_SIZE:
@@ -168,7 +173,12 @@ class ByteBPETokenizer(ByteTokenizer):
                             raise ValueError(f"invalid merged token id: {current}")
                         pending.append(pair[1])
                         pending.append(pair[0])
-        return data.decode("utf-8", errors="replace")
+        return bytes(data)
+
+    def decode(self, token_ids: list[int], *, skip_special_tokens: bool = True) -> str:
+        return self.decode_bytes(token_ids, skip_special_tokens=skip_special_tokens).decode(
+            "utf-8", errors="replace"
+        )
 
     def save(self, path: str | Path) -> None:
         destination = Path(path)
