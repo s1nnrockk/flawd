@@ -283,6 +283,7 @@ def main() -> int:
                 "source": args.dolly_dataset,
                 "license": "CC-BY-SA-3.0",
                 "category": str(row.get("category") or "unknown"),
+                "languages": ["en"],
             }
             # Stable 95/5 split prevents exact record leakage.
             if int(fingerprint[:8], 16) % 20 == 0:
@@ -295,6 +296,10 @@ def main() -> int:
     if args.seed_jsonl:
         from .dataset import read_jsonl
         seed_records = list(read_jsonl(args.seed_jsonl))
+        for record in seed_records:
+            record.setdefault("source", "FLAWD curated seed v2")
+            record.setdefault("license", "Not separately declared; project-owned seed data")
+            record.setdefault("languages", ["ru"])
         train_rows.extend(seed_records)
 
     train_rows, validation_rows, dedupe_stats = _deduplicate_splits(train_rows, validation_rows)
