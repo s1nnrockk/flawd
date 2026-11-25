@@ -50,7 +50,12 @@ def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
             if not isinstance(record, dict):
                 raise ValueError(f"{file_path}:{line_number}: expected a JSON object")
             if isinstance(record.get("text"), str):
-                text = normalize_text(record["text"])
+                raw_text = record["text"]
+                normalized = raw_text.replace("\\r\\n", "\\n").replace("\\r", "\\n").strip()
+                if normalized.startswith(("<|system|>\\n", "<|user|>\\n", "<|assistant|>\\n")):
+                    text = normalized
+                else:
+                    text = normalize_text(raw_text)
             elif isinstance(record.get("messages"), list):
                 try:
                     text = format_conversation(record["messages"])
