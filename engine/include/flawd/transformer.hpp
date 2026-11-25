@@ -19,6 +19,7 @@ struct ModelConfig {
     std::size_t layer_count = 2;
     std::size_t attention_heads = 2;
     std::uint32_t seed = 2026;
+    std::uint64_t tokenizer_fingerprint = 0;
 
     void validate() const;
 };
