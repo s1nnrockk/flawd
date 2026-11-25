@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 #include <unordered_set>
+#include <unordered_set>
 
 namespace flawd {
 struct Scalar::Node {
@@ -25,10 +26,9 @@ void Scalar::zero_grad() noexcept { node_->gradient = 0.0F; }
 
 void Scalar::backward() const {
     std::vector<std::shared_ptr<Node>> ordered;
-    std::vector<std::shared_ptr<Node>> visited;
+    std::unordered_set<Node*> visited;
     std::function<void(const std::shared_ptr<Node>&)> visit = [&](const auto& node) {
-        for (const auto& item : visited) if (item == node) return;
-        visited.push_back(node);
+        if (!visited.insert(node.get()).second) return;
         for (const auto& parent : node->parents) visit(parent);
         ordered.push_back(node);
     };
