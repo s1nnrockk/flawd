@@ -99,7 +99,7 @@ For a BPE-tokenized checkpoint, pass the matching tokenizer after temperature an
 .\build\Release\flawd_chat.exe .\model.flawd 0.8 40 .\python\tokenizer.bpe
 ```
 
-It accepts a prompt in the terminal. Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental byte-level
+It accepts repeated prompts in one session and preserves recent conversation context (bounded to eight context windows). Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental byte-level
 baseline, not a ChatGPT/Claude-scale model. Useful language models require much
 larger licensed datasets, compute, and further engineering.
 
