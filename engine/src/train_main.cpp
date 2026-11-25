@@ -62,7 +62,7 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
 
 int main(int argc, char** argv) {
     if (argc < 3 || argc > 6) {
-        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\n";
+        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens] [resume.flawd]\n";
         return 2;
     }
     try {
@@ -83,10 +83,11 @@ int main(int argc, char** argv) {
         if (argc >= 5) validation = load_tokens(argv[4], config.vocabulary_size);
 
         flawd::TransformerModel model(config);
+        if (argc == 6) model.load_checkpoint(argv[5]);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
         const auto stats = trainer.train(training.tokens, training.loss_mask, epochs);
         flawd::TrainingStats validation_stats;
-        if (argc == 5)
+        if (argc >= 5)
             validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
         model.save_checkpoint(argv[2]);
 
