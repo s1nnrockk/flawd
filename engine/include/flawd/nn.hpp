@@ -52,6 +52,21 @@ public:
     std::vector<Scalar> parameters() override;
 };
 
+class LayerNorm {
+public:
+    explicit LayerNorm(std::size_t feature_size, float epsilon = 1e-5F);
+    ScalarVector forward(const ScalarVector& input);
+    std::vector<Scalar> parameters();
+
+private:
+    std::size_t feature_size_;
+    float epsilon_;
+    std::vector<Scalar> gamma_;
+    std::vector<Scalar> beta_;
+};
+
+ScalarVector softmax(const ScalarVector& logits);
+
 class Tanh final : public Layer {
 public:
     ScalarVector forward(const ScalarVector& input) override;
