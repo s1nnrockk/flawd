@@ -9,7 +9,8 @@
 
 int main() {
     flawd::ModelConfig config;
-    config.vocabulary_size = 259;
+    config.vocabulary_size = 263;
+    config.tokenizer_fingerprint = 0x0123456789abcdefULL;
     config.context_length = 8;
     config.embedding_size = 8;
     config.feed_forward_size = 16;
@@ -57,7 +58,8 @@ int main() {
         checkpoint_config.embedding_size != config.embedding_size ||
         checkpoint_config.feed_forward_size != config.feed_forward_size ||
         checkpoint_config.layer_count != config.layer_count ||
-        checkpoint_config.attention_heads != config.attention_heads)
+        checkpoint_config.attention_heads != config.attention_heads ||
+        checkpoint_config.tokenizer_fingerprint != config.tokenizer_fingerprint)
         throw std::runtime_error("Checkpoint configuration reader returned incorrect dimensions");
     auto mutable_parameters = model.parameters();
     mutable_parameters.front().set_value(original_weight + 1.0F);
