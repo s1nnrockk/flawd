@@ -58,6 +58,19 @@ class DatasetTests(unittest.TestCase):
         self.assertTrue(formatted.startswith("<|system|>\nBe accurate.\n<|user|>"))
         self.assertIn("<|assistant|>\ndef answer():\n    return 42\n", formatted)
 
+    def test_clean_dataset_preserves_code_indentation_in_conversation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "conversation.jsonl"
+            clean = root / "clean.jsonl"
+            source.write_text(json.dumps({"messages": [
+                {"role": "user", "content": "Write code"},
+                {"role": "assistant", "content": "def f():\n    return 1"},
+            ]}) + "\n", encoding="utf-8")
+            build_clean_dataset(source, clean)
+            cleaned_text = next(read_jsonl(clean))["text"]
+            self.assertIn("def f():\n    return 1", cleaned_text)
+
     def test_reads_conversation_jsonl(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "conversation.jsonl"
