@@ -59,7 +59,7 @@ def _encode_record(text: str, tokenizer: ByteTokenizer) -> tuple[list[int], list
         body_flags.extend([int(segment_flag)] * len(segment_ids))
         cursor = end
     ids = [tokenizer.BOS_ID, *body_ids, tokenizer.EOS_ID]
-    flags = [0, *body_flags, int(final_role == "<|assistant|>\\n")]
+    flags = [0, *body_flags, int(final_role == "<|assistant|>\n")]
     return ids, flags
 
 
