@@ -289,7 +289,8 @@ ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
     if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
     std::uint32_t version = 0;
     read(version);
-    if (version != 2) throw std::runtime_error("Unsupported FLAWD checkpoint version");
+    if (version != 2 && version != 3)
+        throw std::runtime_error("Unsupported FLAWD checkpoint version");
     ModelConfig stored;
     read(stored.vocabulary_size);
     read(stored.context_length);
@@ -298,6 +299,7 @@ ModelConfig TransformerModel::read_checkpoint_config(const std::string& path) {
     read(stored.layer_count);
     read(stored.attention_heads);
     read(stored.seed);
+    if (version >= 3) read(stored.tokenizer_fingerprint);
     stored.validate();
     return stored;
 }
@@ -306,7 +308,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
     std::ofstream output(path, std::ios::binary);
     if (!output) throw std::runtime_error("Unable to open checkpoint for writing");
     const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
-    const std::uint32_t version = 2;
+    const std::uint32_t version = 3;
     const auto write = [&](const auto& value) {
         output.write(reinterpret_cast<const char*>(&value), sizeof(value));
     };
@@ -319,6 +321,7 @@ void TransformerModel::save_checkpoint(const std::string& path) {
     write(config_.layer_count);
     write(config_.attention_heads);
     write(config_.seed);
+    write(config_.tokenizer_fingerprint);
     auto model_parameters = parameters();
     const std::uint64_t count = static_cast<std::uint64_t>(model_parameters.size());
     write(count);
@@ -342,7 +345,8 @@ void TransformerModel::load_checkpoint(const std::string& path) {
     if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
     std::uint32_t version = 0;
     read(version);
-    if (version != 2) throw std::runtime_error("Unsupported FLAWD checkpoint version");
+    if (version != 2 && version != 3)
+        throw std::runtime_error("Unsupported FLAWD checkpoint version");
 
     ModelConfig stored;
     read(stored.vocabulary_size);
@@ -352,12 +356,14 @@ void TransformerModel::load_checkpoint(const std::string& path) {
     read(stored.layer_count);
     read(stored.attention_heads);
     read(stored.seed);
+    if (version >= 3) read(stored.tokenizer_fingerprint);
     if (stored.vocabulary_size != config_.vocabulary_size ||
         stored.context_length != config_.context_length ||
         stored.embedding_size != config_.embedding_size ||
         stored.feed_forward_size != config_.feed_forward_size ||
         stored.layer_count != config_.layer_count ||
-        stored.attention_heads != config_.attention_heads)
+        stored.attention_heads != config_.attention_heads ||
+        stored.tokenizer_fingerprint != config_.tokenizer_fingerprint)
         throw std::runtime_error("Checkpoint model configuration does not match this model");
 
     std::uint64_t count = 0;
