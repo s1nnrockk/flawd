@@ -70,17 +70,21 @@ int main(int argc, char** argv) {
         config.seed = 2026;
 
         auto tokens = load_tokens(argv[1], config.vocabulary_size);
+        std::vector<std::size_t> validation_tokens;
+        if (argc == 5)
+            validation_tokens = load_tokens(argv[4], config.vocabulary_size);
+
         flawd::TransformerModel model(config);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
         const auto stats = trainer.train(tokens, epochs);
+        flawd::TrainingStats validation;
+        if (argc == 5) validation = trainer.evaluate(validation_tokens);
         model.save_checkpoint(argv[2]);
 
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << stats.steps << "\n"
                   << "Training loss: " << stats.average_loss << "\n";
         if (argc == 5) {
-            const auto validation_tokens = load_tokens(argv[4], config.vocabulary_size);
-            const auto validation = trainer.evaluate(validation_tokens);
             std::cout << "Validation steps: " << validation.steps << "\n"
                       << "Validation loss: " << validation.average_loss << "\n";
         }
