@@ -83,7 +83,8 @@ private:
     std::vector<Layer*> layers_;
 };
 
-Scalar mean_squared_error(const ScalarVector& prediction, const ScalarVector& target);\nScalar cross_entropy_loss(const ScalarVector& logits, std::size_t target_index);
+Scalar mean_squared_error(const ScalarVector& prediction, const ScalarVector& target);
+Scalar cross_entropy_loss(const ScalarVector& logits, std::size_t target_index);
 
 class SGD {
 public:
@@ -96,6 +97,26 @@ public:
 private:
     std::vector<Scalar> parameters_;
     float learning_rate_;
+};
+
+class Adam {
+public:
+    explicit Adam(std::vector<Scalar> parameters, float learning_rate = 0.001F,
+                  float beta1 = 0.9F, float beta2 = 0.999F, float epsilon = 1e-8F);
+    void zero_grad() noexcept;
+    void step();
+    void set_learning_rate(float learning_rate);
+    float learning_rate() const noexcept;
+
+private:
+    std::vector<Scalar> parameters_;
+    std::vector<float> first_moment_;
+    std::vector<float> second_moment_;
+    float learning_rate_;
+    float beta1_;
+    float beta2_;
+    float epsilon_;
+    std::size_t step_count_ = 0;
 };
 
 } // namespace flawd
