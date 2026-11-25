@@ -25,6 +25,7 @@ Integer read_little_endian(std::istream& input) {
 }
 
 struct TokenCorpus {
+    std::size_t vocabulary_size = 0;
     std::vector<std::size_t> tokens;
     std::vector<std::uint8_t> loss_mask;
 };
@@ -56,7 +57,10 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     const auto vocabulary = read_little_endian<std::uint32_t>(input);
     const auto count = read_little_endian<std::uint64_t>(input);
     if (version != 1 && version != 2) throw std::runtime_error("Unsupported token file version");
-    if (vocabulary != expected_vocab) throw std::runtime_error("Token file vocabulary does not match model");
+    if (vocabulary < 259 || vocabulary > 65536)
+        throw std::runtime_error("Token file vocabulary must be between 259 and 65536");
+    if (expected_vocab != 0 && vocabulary != expected_vocab)
+        throw std::runtime_error("Token file vocabulary does not match model");
     if (count < 2) throw std::runtime_error("Token file must contain at least two tokens");
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
@@ -72,6 +76,7 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     if (!input) throw std::runtime_error("Cannot seek to token payload");
 
     TokenCorpus corpus;
+    corpus.vocabulary_size = vocabulary;
     corpus.tokens.reserve(static_cast<std::size_t>(count));
     corpus.loss_mask.reserve(static_cast<std::size_t>(count));
     std::size_t supervised = 0;
@@ -115,8 +120,9 @@ int main(int argc, char** argv) {
     try {
         const std::size_t epochs = argc >= 4 ? parse_epochs(argv[3]) : 1;
 
+        auto training = load_tokens(argv[1], 0);
         flawd::ModelConfig config;
-        config.vocabulary_size = 259;
+        config.vocabulary_size = training.vocabulary_size;
         config.context_length = argc >= 7 ? parse_positive_size(argv[6], "Context length") : 64;
         config.embedding_size = argc >= 8 ? parse_positive_size(argv[7], "Embedding size") : 8;
         config.feed_forward_size = argc >= 9 ? parse_positive_size(argv[8], "Feed-forward size") : 16;
@@ -125,7 +131,7 @@ int main(int argc, char** argv) {
         config.seed = 2026;
         config.validate();
 
-        auto training = load_tokens(argv[1], config.vocabulary_size);
+
         TokenCorpus validation;
         if (argc >= 5) {
             std::error_code path_error;
