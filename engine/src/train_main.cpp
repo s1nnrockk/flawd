@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (argc < 5) model.save_checkpoint(argv[2]);
+        if (argc < 5) trainer.save_checkpoint(argv[2]);
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << total_steps << "\n"
                   << "Training loss: " << (total_loss / static_cast<double>(total_steps)) << "\n";
