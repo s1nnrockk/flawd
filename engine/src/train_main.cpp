@@ -71,15 +71,30 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     corpus.tokens.reserve(static_cast<std::size_t>(count));
     corpus.loss_mask.reserve(static_cast<std::size_t>(count));
     std::size_t supervised = 0;
+    bool inside_record = false;
     for (std::uint64_t i = 0; i < count; ++i) {
         const auto token = read_little_endian<std::uint16_t>(input);
         const auto flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
         if (token >= vocabulary) throw std::runtime_error("Token ID is outside the vocabulary");
         if (flag > 1) throw std::runtime_error("Token loss mask must be 0 or 1");
+        if (token == 256)
+            throw std::runtime_error("PAD tokens are not valid in an unpadded training corpus");
+        if (token == 257) {
+            if (inside_record) throw std::runtime_error("Nested BOS marker in token corpus");
+            if (i == 0 && flag != 0)
+                throw std::runtime_error("The initial BOS token cannot be a supervised target");
+            inside_record = true;
+        } else if (token == 258) {
+            if (!inside_record) throw std::runtime_error("EOS marker appears outside a record");
+            inside_record = false;
+        } else if (!inside_record) {
+            throw std::runtime_error("Text token appears outside a BOS/EOS record");
+        }
         corpus.tokens.push_back(token);
         corpus.loss_mask.push_back(flag);
-        supervised += flag;
+        if (i > 0) supervised += flag;
     }
+    if (inside_record) throw std::runtime_error("Token corpus ends before the final EOS marker");
     if (input.peek() != std::char_traits<char>::eof())
         throw std::runtime_error("Token file contains unexpected trailing data");
     if (supervised == 0) throw std::runtime_error("Token file contains no supervised targets");
