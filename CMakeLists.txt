@@ -48,4 +48,8 @@ if(BUILD_TESTING)
     add_executable(flawd_trainer_tests tests/cpp/test_trainer.cpp)
     target_link_libraries(flawd_trainer_tests PRIVATE flawd_engine)
     add_test(NAME flawd_trainer_tests COMMAND flawd_trainer_tests)
+
+    add_executable(flawd_tokenizer_tests tests/cpp/test_tokenizer.cpp)
+    target_link_libraries(flawd_tokenizer_tests PRIVATE flawd_engine)
+    add_test(NAME flawd_tokenizer_tests COMMAND flawd_tokenizer_tests)
 endif()
