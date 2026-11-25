@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -15,6 +16,15 @@ int main() {
     config.layer_count = 2;
     config.attention_heads = 2;
     flawd::TransformerModel model(config);
+
+    auto oversized_config = config;
+    oversized_config.embedding_size = std::numeric_limits<std::size_t>::max();
+    oversized_config.attention_heads = 1;
+    bool rejected_overflowing_dimensions = false;
+    try { oversized_config.validate(); }
+    catch (const std::length_error&) { rejected_overflowing_dimensions = true; }
+    if (!rejected_overflowing_dimensions)
+        throw std::runtime_error("Model config accepted dimensions that overflow parameter storage");
 
     const auto first = model.forward({10, 20});
     const auto changed_future = model.forward({10, 21});
