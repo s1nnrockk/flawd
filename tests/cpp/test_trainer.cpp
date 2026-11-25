@@ -52,6 +52,6 @@ int main() {
     if (!rejected_empty_mask)
         throw std::runtime_error("Trainer accepted a mask with no supervised targets");
 
-    std::cout << "FLAWD training loop tests passed.\\n";
+    std::cout << "FLAWD training loop tests passed.\n";
     return 0;
 }
