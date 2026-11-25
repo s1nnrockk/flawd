@@ -24,7 +24,7 @@ def format_conversation(messages: list[dict[str, str]]) -> str:
             raise ValueError(f"message {index} must be an object")
         role = message.get("role")
         content = message.get("content")
-        if role not in {"system", "user", "assistant"}:
+        if not isinstance(role, str) or role not in {"system", "user", "assistant"}:
             raise ValueError(f"message {index} has an unsupported role")
         if not isinstance(content, str) or not content.strip():
             raise ValueError(f"message {index} content must be a non-empty string")
