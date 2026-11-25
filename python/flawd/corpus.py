@@ -11,6 +11,7 @@ from .tokenizer import ByteBPETokenizer, ByteTokenizer
 _MAGIC = b"FLAWDTOK"
 _VERSION = 2
 _HEADER = struct.Struct("<8sIIQ")
+_HEADER_V3 = struct.Struct("<8sIIQQ")
 _TOKEN = struct.Struct("<HB")
 _ROLE_MARKERS = ("<|system|>\n", "<|user|>\n", "<|assistant|>\n")
 
@@ -77,6 +78,9 @@ def tokenize_jsonl(
     source_path = Path(source).resolve()
     if output_path.resolve() == source_path:
         raise ValueError("Source and token output paths must be different")
+    file_version = 3 if isinstance(tokenizer, ByteBPETokenizer) else 2
+    tokenizer_fingerprint = tokenizer.fingerprint if isinstance(tokenizer, ByteBPETokenizer) else 0
+    header = _HEADER_V3 if file_version == 3 else _HEADER
     output_path.parent.mkdir(parents=True, exist_ok=True)
     record_count = 0
     token_count = 0
@@ -88,7 +92,7 @@ def tokenize_jsonl(
             prefix=output_path.name + ".", suffix=".tmp", delete=False,
         ) as output:
             temporary_token_path = Path(output.name)
-            output.write(_HEADER.pack(_MAGIC, _VERSION, tokenizer.VOCAB_SIZE, 0))
+            output.write(header.pack(_MAGIC, file_version, tokenizer.VOCAB_SIZE, 0, tokenizer_fingerprint) if file_version == 3 else header.pack(_MAGIC, file_version, tokenizer.VOCAB_SIZE, 0))
             for record in read_jsonl(source):
                 ids, flags = _encode_record(record["text"], tokenizer)
                 for token_id, flag in zip(ids, flags):
@@ -101,7 +105,7 @@ def tokenize_jsonl(
             if supervised_tokens == 0:
                 raise ValueError("Dataset contains no supervised training targets")
             output.seek(0)
-            output.write(_HEADER.pack(_MAGIC, _VERSION, tokenizer.VOCAB_SIZE, token_count))
+            output.write(header.pack(_MAGIC, file_version, tokenizer.VOCAB_SIZE, token_count, tokenizer_fingerprint) if file_version == 3 else header.pack(_MAGIC, file_version, tokenizer.VOCAB_SIZE, token_count))
             output.flush()
             os.fsync(output.fileno())
         os.replace(temporary_token_path, output_path)
@@ -112,10 +116,11 @@ def tokenize_jsonl(
 
     manifest = {
         "format": "FLAWDTOK",
-        "version": _VERSION,
+        "version": file_version,
         "tokenizer": tokenizer.NAME,
         "loss_mask": "assistant-content-only-for-role-tagged-records; all-text-for-plain-records",
         "vocabulary_size": tokenizer.VOCAB_SIZE,
+        "tokenizer_fingerprint": tokenizer_fingerprint,
         "records": record_count,
         "tokens": token_count,
         "supervised_tokens": supervised_tokens,
