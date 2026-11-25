@@ -99,18 +99,13 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(vocab, tokenizer.VOCAB_SIZE)
             records = [struct.unpack("<HB", payload[24 + i * 3:27 + i * 3]) for i in range(count)]
             self.assertEqual(tokenizer.decode([item[0] for item in records]), serialized)
-            pieces = [tokenizer.decode([item[0]]) for item in records[1:-1]]
+            pieces = [tokenizer.decode_bytes([item[0]]) for item in records[1:-1]]
             flags = [item[1] for item in records[1:-1]]
             decoded_offset = 0
+            assistant_start = len(serialized[:serialized.index("Всё хорошо")].encode("utf-8"))
             for piece, flag in zip(pieces, flags):
-                expected = 1 if serialized[decoded_offset:].startswith("Всё хорошо") or (
-                    decoded_offset >= len(serialized[:serialized.index("Всё хорошо")].encode("utf-8"))
-                ) else 0
-                if decoded_offset < len(serialized[:serialized.index("Всё хорошо")].encode("utf-8")):
-                    self.assertEqual(flag, 0)
-                else:
-                    self.assertEqual(flag, 1)
-                decoded_offset += len(piece.encode("utf-8"))
+                self.assertEqual(flag, 1 if decoded_offset >= assistant_start else 0)
+                decoded_offset += len(piece)
             self.assertEqual(records[-1][1], 1)
 
     def test_conversation_masks_only_assistant_content(self):
