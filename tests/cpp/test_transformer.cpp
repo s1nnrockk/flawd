@@ -1,6 +1,7 @@
 #include "flawd/transformer.hpp"
 
 #include <cmath>
+#include <filesystem>
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -63,9 +64,13 @@ int main() {
         throw std::runtime_error("Checkpoint configuration reader returned incorrect dimensions");
     auto mutable_parameters = model.parameters();
     mutable_parameters.front().set_value(original_weight + 1.0F);
+    model.save_checkpoint(checkpoint_path);
+    model.parameters().front().set_value(original_weight);
     model.load_checkpoint(checkpoint_path);
-    if (std::fabs(model.parameters().front().value() - original_weight) > 1e-6F)
-        throw std::runtime_error("Checkpoint did not restore model weights");
+    if (std::fabs(model.parameters().front().value() - (original_weight + 1.0F)) > 1e-6F)
+        throw std::runtime_error("Checkpoint overwrite did not atomically replace model weights");
+    if (std::filesystem::exists(checkpoint_path + ".tmp"))
+        throw std::runtime_error("Checkpoint save left a temporary file behind");
     auto different_heads = config;
     different_heads.attention_heads = 4;
     flawd::TransformerModel incompatible_model(different_heads);
