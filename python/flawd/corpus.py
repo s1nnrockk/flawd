@@ -76,8 +76,11 @@ def tokenize_jsonl(
     tokenizer = ByteBPETokenizer.load(tokenizer_path) if tokenizer_path else ByteTokenizer()
     output_path = Path(destination)
     source_path = Path(source).resolve()
+    manifest_path = output_path.with_suffix(output_path.suffix + ".json")
     if output_path.resolve() == source_path:
         raise ValueError("Source and token output paths must be different")
+    if manifest_path.resolve() in {source_path, output_path.resolve()}:
+        raise ValueError("Source, token output, and manifest paths must be different")
     file_version = 3 if isinstance(tokenizer, ByteBPETokenizer) else 2
     tokenizer_fingerprint = tokenizer.fingerprint if isinstance(tokenizer, ByteBPETokenizer) else 0
     header = _HEADER_V3 if file_version == 3 else _HEADER
@@ -129,7 +132,6 @@ def tokenize_jsonl(
         "license": license_id,
         "language": language,
     }
-    manifest_path = output_path.with_suffix(output_path.suffix + ".json")
     temporary_manifest_path = None
     try:
         with tempfile.NamedTemporaryFile(
