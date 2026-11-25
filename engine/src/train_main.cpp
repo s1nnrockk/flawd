@@ -23,7 +23,12 @@ Integer read_little_endian(std::istream& input) {
     return value;
 }
 
-std::vector<std::size_t> load_tokens(const std::string& path, std::size_t expected_vocab) {
+struct TokenCorpus {
+    std::vector<std::size_t> tokens;
+    std::vector<std::uint8_t> loss_mask;
+};
+
+TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     std::ifstream input(path, std::ios::binary);
     if (!input) throw std::runtime_error("Cannot open token file: " + path);
     char magic[8]{};
@@ -33,27 +38,31 @@ std::vector<std::size_t> load_tokens(const std::string& path, std::size_t expect
     const auto version = read_little_endian<std::uint32_t>(input);
     const auto vocabulary = read_little_endian<std::uint32_t>(input);
     const auto count = read_little_endian<std::uint64_t>(input);
-    if (version != 1) throw std::runtime_error("Unsupported token file version");
+    if (version != 1 && version != 2) throw std::runtime_error("Unsupported token file version");
     if (vocabulary != expected_vocab) throw std::runtime_error("Token file vocabulary does not match model");
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
 
-    std::vector<std::size_t> tokens;
-    tokens.reserve(static_cast<std::size_t>(count));
+    TokenCorpus corpus;
+    corpus.tokens.reserve(static_cast<std::size_t>(count));
+    corpus.loss_mask.reserve(static_cast<std::size_t>(count));
     for (std::uint64_t i = 0; i < count; ++i) {
         const auto token = read_little_endian<std::uint16_t>(input);
+        const auto flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
         if (token >= vocabulary) throw std::runtime_error("Token ID is outside the vocabulary");
-        tokens.push_back(token);
+        if (flag > 1) throw std::runtime_error("Token loss mask must be 0 or 1");
+        corpus.tokens.push_back(token);
+        corpus.loss_mask.push_back(flag);
     }
     if (input.peek() != std::char_traits<char>::eof())
         throw std::runtime_error("Token file contains unexpected trailing data");
-    return tokens;
+    return corpus;
 }
 }
 
 int main(int argc, char** argv) {
     if (argc < 3 || argc > 5) {
-        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\n";
+        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\\n";
         return 2;
     }
     try {
@@ -69,29 +78,29 @@ int main(int argc, char** argv) {
         config.attention_heads = 2;
         config.seed = 2026;
 
-        auto tokens = load_tokens(argv[1], config.vocabulary_size);
-        std::vector<std::size_t> validation_tokens;
-        if (argc == 5)
-            validation_tokens = load_tokens(argv[4], config.vocabulary_size);
+        auto training = load_tokens(argv[1], config.vocabulary_size);
+        TokenCorpus validation;
+        if (argc == 5) validation = load_tokens(argv[4], config.vocabulary_size);
 
         flawd::TransformerModel model(config);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
-        const auto stats = trainer.train(tokens, epochs);
-        flawd::TrainingStats validation;
-        if (argc == 5) validation = trainer.evaluate(validation_tokens);
+        const auto stats = trainer.train(training.tokens, training.loss_mask, epochs);
+        flawd::TrainingStats validation_stats;
+        if (argc == 5)
+            validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
         model.save_checkpoint(argv[2]);
 
-        std::cout << "FLAWD training complete\n"
-                  << "Steps: " << stats.steps << "\n"
-                  << "Training loss: " << stats.average_loss << "\n";
+        std::cout << "FLAWD training complete\\n"
+                  << "Steps: " << stats.steps << "\\n"
+                  << "Training loss: " << stats.average_loss << "\\n";
         if (argc == 5) {
-            std::cout << "Validation steps: " << validation.steps << "\n"
-                      << "Validation loss: " << validation.average_loss << "\n";
+            std::cout << "Validation steps: " << validation_stats.steps << "\\n"
+                      << "Validation loss: " << validation_stats.average_loss << "\\n";
         }
-        std::cout << "Checkpoint: " << argv[2] << "\n";
+        std::cout << "Checkpoint: " << argv[2] << "\\n";
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "FLAWD training error: " << error.what() << '\n';
+        std::cerr << "FLAWD training error: " << error.what() << '\\n';
         return 1;
     }
 }
