@@ -12,11 +12,11 @@ def main() -> int:
     )
     parser.add_argument("input", help="Clean UTF-8 JSONL dataset")
     parser.add_argument("output", help="Output .bpe tokenizer file")
-    parser.add_argument("--vocab-size", type=int, default=1024,
+    parser.add_argument("--vocab-size", type=int, default=512,
                         help="Target vocabulary size including special tokens (default: 1024)")
     parser.add_argument("--min-frequency", type=int, default=2,
                         help="Minimum pair frequency for a merge (default: 2)")
-    parser.add_argument("--max-training-bytes", type=int, default=2_000_000,
+    parser.add_argument("--max-training-bytes", type=int, default=250_000,
                         help="Maximum UTF-8 bytes used to train the tokenizer")
     args = parser.parse_args()
     records = read_jsonl(args.input)
