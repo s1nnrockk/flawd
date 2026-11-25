@@ -65,8 +65,8 @@ public:
     std::vector<Scalar> parameters();
     const ModelConfig& config() const noexcept;
     static ModelConfig read_checkpoint_config(const std::string& path);
-    void save_checkpoint(const std::string& path);
-    void load_checkpoint(const std::string& path);
+    void save_checkpoint(const std::string& path, const Adam* optimizer = nullptr);
+    void load_checkpoint(const std::string& path, Adam* optimizer = nullptr);
 
 private:
     ModelConfig config_;
