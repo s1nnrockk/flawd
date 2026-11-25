@@ -23,6 +23,7 @@ API and website only after the model runtime is dependable.
 - JSONL validation, whitespace normalization, and exact deduplication.
 - Export from cleaned JSONL into the versioned binary `.tokens` format, with assistant-only loss masking for role-tagged conversations.
 - The trainer uses system/user messages as context and scores assistant content only; plain text corpora retain ordinary next-token training.
+- BOS boundaries isolate records so training examples never read tokens from the previous document.
 - Unit tests for tokenizer, datasets, and token-file format.
 
 ### Automated checks
