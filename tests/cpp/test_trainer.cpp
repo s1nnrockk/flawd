@@ -52,6 +52,15 @@ int main() {
     if (!rejected_empty_mask)
         throw std::runtime_error("Trainer accepted a mask with no supervised targets");
 
+    bool rejected_invalid_mask = false;
+    try {
+        trainer.evaluate(masked_tokens, std::vector<std::uint8_t>{0, 2, 0, 0, 0});
+    } catch (const std::invalid_argument&) {
+        rejected_invalid_mask = true;
+    }
+    if (!rejected_invalid_mask)
+        throw std::runtime_error("Trainer accepted an invalid loss mask value");
+
     std::cout << "FLAWD training loop tests passed.\n";
     return 0;
 }
