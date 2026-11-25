@@ -83,7 +83,7 @@ private:
     std::vector<Layer*> layers_;
 };
 
-Scalar mean_squared_error(const ScalarVector& prediction, const ScalarVector& target);
+Scalar mean_squared_error(const ScalarVector& prediction, const ScalarVector& target);\nScalar cross_entropy_loss(const ScalarVector& logits, std::size_t target_index);
 
 class SGD {
 public:
