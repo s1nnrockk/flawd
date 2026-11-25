@@ -133,7 +133,7 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
 
 int main(int argc, char** argv) {
     if (argc < 3 || argc > 11) {
-        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens] [resume.flawd] [context] [embedding] [feed_forward] [layers] [heads]\n";
+        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens|-] [resume.flawd|-] [context] [embedding] [feed_forward] [layers] [heads]\n";
         return 2;
     }
     try {
