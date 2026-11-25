@@ -41,8 +41,17 @@ ByteBPETokenizer::ByteBPETokenizer(const std::string& path) {
     const std::array<char, 8> expected{{'F','L','A','W','D','B','P','E'}};
     if (!input || magic != expected)
         throw std::runtime_error("Invalid FLAWD BPE tokenizer file");
+    std::uint64_t hash = 14695981039346656037ULL;
+    const auto hash_byte = [&](std::uint8_t byte) {
+        hash = (hash ^ byte) * 1099511628211ULL;
+    };
+    for (const auto byte : magic) hash_byte(static_cast<std::uint8_t>(byte));
     const auto version = read_u32(input);
+    for (unsigned int shift = 0; shift < 32; shift += 8)
+        hash_byte(static_cast<std::uint8_t>((version >> shift) & 0xffU));
     vocabulary_size_ = read_u32(input);
+    for (unsigned int shift = 0; shift < 32; shift += 8)
+        hash_byte(static_cast<std::uint8_t>((vocabulary_size_ >> shift) & 0xffU));
     if (version != 1) throw std::runtime_error("Unsupported BPE tokenizer version");
     if (vocabulary_size_ < 259 || vocabulary_size_ > 65536)
         throw std::runtime_error("BPE tokenizer vocabulary size is invalid");
@@ -61,6 +70,10 @@ ByteBPETokenizer::ByteBPETokenizer(const std::string& path) {
     for (std::size_t index = 0; index < merge_count; ++index) {
         const std::size_t left = read_u16(input);
         const std::size_t right = read_u16(input);
+        hash_byte(static_cast<std::uint8_t>(left & 0xffU));
+        hash_byte(static_cast<std::uint8_t>((left >> 8) & 0xffU));
+        hash_byte(static_cast<std::uint8_t>(right & 0xffU));
+        hash_byte(static_cast<std::uint8_t>((right >> 8) & 0xffU));
         const std::size_t new_token = 259 + index;
         if (left >= new_token || right >= new_token ||
             left == 256 || left == 257 || left == 258 ||
@@ -73,10 +86,15 @@ ByteBPETokenizer::ByteBPETokenizer(const std::string& path) {
     }
     if (input.peek() != std::char_traits<char>::eof())
         throw std::runtime_error("BPE tokenizer contains trailing data");
+    fingerprint_ = hash;
 }
 
 std::size_t ByteBPETokenizer::vocabulary_size() const noexcept {
     return vocabulary_size_;
+}
+
+std::uint64_t ByteBPETokenizer::fingerprint() const noexcept {
+    return fingerprint_;
 }
 
 std::vector<std::size_t> ByteBPETokenizer::encode(const std::string& text) const {
