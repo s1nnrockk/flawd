@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
@@ -113,6 +114,16 @@ int main() {
     }
     std::remove(resume_path.c_str());
     std::remove((resume_path + ".tmp").c_str());
+
+    flawd::TransformerModel non_finite_model(config);
+    flawd::LanguageModelTrainer non_finite_trainer(non_finite_model);
+    auto non_finite_parameters = non_finite_model.parameters();
+    non_finite_parameters.back().set_value(std::numeric_limits<float>::quiet_NaN());
+    bool rejected_non_finite_gradient = false;
+    try { non_finite_trainer.train_step({257, 10}, 11); }
+    catch (const std::runtime_error&) { rejected_non_finite_gradient = true; }
+    if (!rejected_non_finite_gradient || non_finite_trainer.steps() != 0)
+        throw std::runtime_error("Adam did not reject non-finite training state safely");
 
     flawd::TransformerModel boundary_model_a(config);
     flawd::TransformerModel boundary_model_b(config);
