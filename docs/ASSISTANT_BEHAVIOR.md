@@ -32,9 +32,9 @@ count. The planned path is:
    configurable multi-head causal attention is now part of the tiny baseline.
 2. Build a legally documented, high-quality pretraining corpus with language
    balance, deduplication, and held-out evaluation data.
-3. Add assistant-only loss masking, then supervised instruction tuning on
-   carefully reviewed examples covering
-   conversation, explanations, coding, tool use, and multilingual tasks.
+3. Assistant-only loss masking is implemented in FLAWDTOK v2 and the C++ trainer.
+   Next, build supervised instruction-tuning datasets with carefully reviewed
+   examples covering conversation, explanations, coding, tool use, and multilingual tasks.
 4. Add preference training only after a reliable supervised baseline exists;
    use clear evaluation criteria and avoid optimizing for flattery or verbosity.
 5. Evaluate factuality, calibration, coding correctness, instruction following,
@@ -55,8 +55,7 @@ count. The planned path is:
 ## Current limitations
 
 The present FLAWD model has a byte-level vocabulary, a very short context window,
-a compact multi-head architecture, and a basic next-token trainer. Conversation
-serialization exists, but assistant-only loss masking and supervised instruction
-tuning are not implemented yet. It is an engineering
+a compact multi-head architecture, and a basic next-token trainer. Conversation serialization and assistant-only loss masking are implemented.
+A sufficiently large, reviewed supervised instruction-tuning run has not yet been performed. It is an engineering
 prototype, not a Claude-level assistant. These goals describe the direction;
 they are not current capabilities.
