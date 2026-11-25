@@ -37,4 +37,8 @@ if(BUILD_TESTING)
     add_executable(flawd_transformer_tests tests/cpp/test_transformer.cpp)
     target_link_libraries(flawd_transformer_tests PRIVATE flawd_engine)
     add_test(NAME flawd_transformer_tests COMMAND flawd_transformer_tests)
+
+    add_executable(flawd_trainer_tests tests/cpp/test_trainer.cpp)
+    target_link_libraries(flawd_trainer_tests PRIVATE flawd_engine)
+    add_test(NAME flawd_trainer_tests COMMAND flawd_trainer_tests)
 endif()
