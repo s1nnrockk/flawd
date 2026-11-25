@@ -68,6 +68,10 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     if (count < 2) throw std::runtime_error("Token file must contain at least two tokens");
     if (count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
         throw std::runtime_error("Token file is too large for this system");
+    constexpr std::uint64_t maximum_tokens_in_memory = 20'000'000;
+    if (count > maximum_tokens_in_memory)
+        throw std::runtime_error(
+            "Token corpus exceeds the 20-million-token in-memory limit; split it into smaller datasets");
     const std::uint64_t bytes_per_token = version >= 2 ? 3 : 2;
     if (count > (std::numeric_limits<std::uint64_t>::max() - header_size) / bytes_per_token)
         throw std::runtime_error("Token file payload size overflows the file format");
