@@ -84,7 +84,7 @@ jobs:
               "sources": [
                   {"id": "OpenAssistant/oasst1", "license": "Apache-2.0", "languages": ["ru", "en"]},
                   {"id": "databricks/databricks-dolly-15k", "license": "CC-BY-SA-3.0", "languages": ["en"]},
-                  {"id": "FLAWD curated seed v2", "license": "Not separately declared; project-owned seed data", "languages": ["ru", "en"]}
+                  {"id": "FLAWD curated seed v2", "license": "Not separately declared; project-owned seed data", "languages": ["ru"]}
               ],
               "train_records": validate_jsonl(root / "train.jsonl"),
               "validation_records": validate_jsonl(root / "validation.jsonl"),
