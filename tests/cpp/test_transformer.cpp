@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <iostream>
 #include <limits>
-#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -28,6 +27,21 @@ int main() {
     catch (const std::length_error&) { rejected_overflowing_dimensions = true; }
     if (!rejected_overflowing_dimensions)
         throw std::runtime_error("Model config accepted dimensions that overflow parameter storage");
+    bool rejected_before_allocation = false;
+    try { flawd::TransformerModel invalid_model(oversized_config); }
+    catch (const std::length_error&) { rejected_before_allocation = true; }
+    if (!rejected_before_allocation)
+        throw std::runtime_error("Transformer constructor did not validate dimensions before allocation");
+
+    auto excessive_config = config;
+    excessive_config.embedding_size = 4096;
+    excessive_config.feed_forward_size = 4096;
+    excessive_config.attention_heads = 1;
+    bool rejected_excessive_parameters = false;
+    try { flawd::TransformerModel invalid_model(excessive_config); }
+    catch (const std::length_error&) { rejected_excessive_parameters = true; }
+    if (!rejected_excessive_parameters)
+        throw std::runtime_error("Transformer accepted a model above the parameter safety limit");
 
     const auto first = model.forward({10, 20});
     const auto changed_future = model.forward({10, 21});
