@@ -81,6 +81,19 @@ class DatasetTests(unittest.TestCase):
             text = next(read_jsonl(source))["text"]
             self.assertEqual(text, "<|user|>\nHi\n<|assistant|>\nHello\n")
 
+    def test_split_rejects_overwriting_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "raw.jsonl"
+            train = root / "train.jsonl"
+            source.write_text(
+                json.dumps({"text": "one"}) + "\n" + json.dumps({"text": "two"}) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                build_clean_dataset(source, train, source)
+            self.assertEqual(len(list(read_jsonl(source))), 2)
+
     def test_rejects_invalid_record(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "bad.jsonl"
