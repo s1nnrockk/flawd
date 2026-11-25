@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace flawd {
@@ -30,6 +31,8 @@ public:
                            const std::vector<std::uint8_t>& loss_mask,
                            std::size_t stride = 1);
     void set_learning_rate(float learning_rate);
+    void save_checkpoint(const std::string& path);
+    void load_checkpoint(const std::string& path);
     std::size_t steps() const noexcept;
 
 private:
