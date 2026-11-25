@@ -52,15 +52,7 @@ int main(int argc, char** argv) {
             throw std::invalid_argument("Temperature must be a finite non-negative number");
         if (top_k == 0) throw std::invalid_argument("top_k must be positive");
         std::mt19937 random(2026);
-        flawd::ModelConfig config;
-        config.vocabulary_size = 259;
-        config.context_length = 64;
-        config.embedding_size = 8;
-        config.feed_forward_size = 16;
-        config.layer_count = 1;
-        config.attention_heads = 2;
-        config.seed = 2026;
-
+        const auto config = flawd::TransformerModel::read_checkpoint_config(argv[1]);
         flawd::TransformerModel model(config);
         model.load_checkpoint(argv[1]);
 
