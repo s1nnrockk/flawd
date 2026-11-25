@@ -1,6 +1,7 @@
 #include "flawd/transformer.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <stdexcept>
 #include <string>
