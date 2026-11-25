@@ -44,7 +44,7 @@ Scalar operator+(const Scalar& a, const Scalar& b) {
     n->data = a.value() + b.value();
     n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [n, x, y] { x->gradient += n->gradient; y->gradient += n->gradient; };
+    n->backward = [self = n.get(), x, y] { x->gradient += self->gradient; y->gradient += self->gradient; };
     return Scalar(n);
 }
 Scalar operator-(const Scalar& a, const Scalar& b) {
@@ -52,7 +52,7 @@ Scalar operator-(const Scalar& a, const Scalar& b) {
     n->data = a.value() - b.value();
     n->parents = {a.node_, b.node_};
     const auto x = a.node_, y = b.node_;
-    n->backward = [n, x, y] { x->gradient += n->gradient; y->gradient -= n->gradient; };
+    n->backward = [self = n.get(), x, y] { x->gradient += self->gradient; y->gradient -= self->gradient; };
     return Scalar(n);
 }
 Scalar operator*(const Scalar& a, const Scalar& b) {
@@ -83,7 +83,7 @@ Scalar tanh(const Scalar& input) {
     n->data = std::tanh(input.value());
     n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [n, x] { x->gradient += (1.0F - n->data * n->data) * n->gradient; };
+    n->backward = [self = n.get(), x] { x->gradient += (1.0F - self->data * self->data) * self->gradient; };
     return Scalar(n);
 }
 Scalar relu(const Scalar& input) {
@@ -91,7 +91,7 @@ Scalar relu(const Scalar& input) {
     n->data = input.value() > 0.0F ? input.value() : 0.0F;
     n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [n, x] { if (x->data > 0.0F) x->gradient += n->gradient; };
+    n->backward = [self = n.get(), x] { if (x->data > 0.0F) x->gradient += self->gradient; };
     return Scalar(n);
 }
 Scalar exp(const Scalar& input) {
@@ -99,7 +99,7 @@ Scalar exp(const Scalar& input) {
     n->data = std::exp(input.value());
     n->parents = {input.node_};
     const auto x = input.node_;
-    n->backward = [n, x] { x->gradient += n->data * n->gradient; };
+    n->backward = [self = n.get(), x] { x->gradient += self->data * self->gradient; };
     return Scalar(n);
 }
 
