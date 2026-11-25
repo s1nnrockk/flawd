@@ -18,10 +18,12 @@ public:
     explicit LanguageModelTrainer(TransformerModel& model, float learning_rate = 0.001F);
     float train_step(const std::vector<std::size_t>& input_tokens, std::size_t target_token);
     TrainingStats train(const std::vector<std::size_t>& token_stream,
-                        std::size_t epochs = 1, std::size_t stride = 1);
+                        std::size_t epochs = 1, std::size_t stride = 1,
+                        std::size_t gradient_accumulation = 1);
     TrainingStats train(const std::vector<std::size_t>& token_stream,
                         const std::vector<std::uint8_t>& loss_mask,
-                        std::size_t epochs = 1, std::size_t stride = 1);
+                        std::size_t epochs = 1, std::size_t stride = 1,
+                        std::size_t gradient_accumulation = 1);
     TrainingStats evaluate(const std::vector<std::size_t>& token_stream,
                            std::size_t stride = 1);
     TrainingStats evaluate(const std::vector<std::size_t>& token_stream,
