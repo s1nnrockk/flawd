@@ -31,7 +31,7 @@ GitHub Actions builds the C++ targets and runs CTest and Python unit tests on Wi
 
 ### First curated instruction corpus
 
-The repository now includes an original 114-conversation Russian/English seed corpus at `data/seed/flawd-instructions-v2.jsonl`. It covers practical explanations, programming, ML fundamentals, factual uncertainty, safe responses, and format following. It is a expanded first instruction-tuning experiment, not enough data for broad language competence.
+The repository now includes an original 114-conversation Russian/English seed corpus at `data/seed/flawd-instructions-v2.jsonl`. It covers practical explanations, programming, ML fundamentals, factual uncertainty, safe responses, and format following. It is an expanded first instruction-tuning experiment, not enough data for broad language competence.
 
 A separate GitHub Actions workflow prepares a document-level 90/10 split, fits BPE on training data only, exports assistant-only targets, trains a compact CPU model for up to two epochs, and uploads the best validation checkpoint with its tokenizer and run report. Open the repository's **Actions → FLAWD seed training** run and download the `flawd-seed-model-...` artifact when it completes.
 
