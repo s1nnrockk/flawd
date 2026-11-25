@@ -28,11 +28,12 @@ The current byte-level Transformer is only a tiny next-token prediction
 prototype. These behavior goals require much more than increasing parameter
 count. The planned path is:
 
-1. Improve the tokenizer, context handling, batching, and Transformer
-   architecture (including multi-head causal attention).
+1. Improve the tokenizer, context handling, batching, and model efficiency;
+   configurable multi-head causal attention is now part of the tiny baseline.
 2. Build a legally documented, high-quality pretraining corpus with language
    balance, deduplication, and held-out evaluation data.
-3. Add supervised instruction tuning on carefully reviewed examples covering
+3. Add assistant-only loss masking, then supervised instruction tuning on
+   carefully reviewed examples covering
    conversation, explanations, coding, tool use, and multilingual tasks.
 4. Add preference training only after a reliable supervised baseline exists;
    use clear evaluation criteria and avoid optimizing for flattery or verbosity.
@@ -53,7 +54,9 @@ count. The planned path is:
 
 ## Current limitations
 
-The present FLAWD model has a small vocabulary and context window, a compact
-single-head architecture, and a basic next-token trainer. It is an engineering
+The present FLAWD model has a byte-level vocabulary, a very short context window,
+a compact multi-head architecture, and a basic next-token trainer. Conversation
+serialization exists, but assistant-only loss masking and supervised instruction
+tuning are not implemented yet. It is an engineering
 prototype, not a Claude-level assistant. These goals describe the direction;
 they are not current capabilities.
