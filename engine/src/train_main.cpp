@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
         }
 
         flawd::TransformerModel model(config);
-        if (argc == 6) model.load_checkpoint(argv[5]);
+        if (argc >= 6 && std::string(argv[5]) != "-") model.load_checkpoint(argv[5]);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
 
         constexpr std::size_t early_stopping_patience = 3;
