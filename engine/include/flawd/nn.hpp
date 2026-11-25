@@ -120,6 +120,7 @@ public:
     std::uint64_t step_count() const noexcept;
     AdamState state() const;
     void load_state(const AdamState& state);
+    void reset_state() noexcept;
 
 private:
     std::vector<Scalar> parameters_;
