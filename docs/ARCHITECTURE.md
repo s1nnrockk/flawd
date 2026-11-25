@@ -20,7 +20,7 @@ Role-tagged conversations use system/user/assistant markers. FLAWDTOK v2
 stores a one-byte loss flag alongside each token. System and user tokens are
 available as causal context, but only assistant content is selected as a
 training/evaluation target. Plain-text records retain ordinary next-token
-training. The C++ trainer accepts both masked and legacy unmasked streams;
+training. The C++ trainer accepts both masked and legacy unmasked streams. Each BOS token starts a fresh context window, preventing attention from crossing document boundaries;
 FLAWDTOK v1 files are interpreted as all-target corpora.
 
 This implements assistant-only loss masking, a necessary supervised
