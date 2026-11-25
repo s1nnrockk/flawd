@@ -1,8 +1,10 @@
 #include "flawd/transformer.hpp"
 
 #include <cmath>
+#include <cstdio>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 int main() {
     flawd::ModelConfig config;
@@ -21,6 +23,16 @@ int main() {
         if (std::fabs(first[0][i].value() - changed_future[0][i].value()) > 1e-5F)
             throw std::runtime_error("Causal attention leaked a future token");
     }
+    const auto original_weight = model.parameters().front().value();
+    const std::string checkpoint_path = "flawd_test_checkpoint.bin";
+    model.save_checkpoint(checkpoint_path);
+    auto mutable_parameters = model.parameters();
+    mutable_parameters.front().set_value(original_weight + 1.0F);
+    model.load_checkpoint(checkpoint_path);
+    if (std::fabs(model.parameters().front().value() - original_weight) > 1e-6F)
+        throw std::runtime_error("Checkpoint did not restore model weights");
+    std::remove(checkpoint_path.c_str());
+
     if (model.parameters().empty())
         throw std::runtime_error("Transformer model has no trainable parameters");
 
