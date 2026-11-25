@@ -156,8 +156,8 @@ int main(int argc, char** argv) {
         }
 
         flawd::TransformerModel model(config);
-        if (argc >= 6 && std::string(argv[5]) != "-") model.load_checkpoint(argv[5]);
         flawd::LanguageModelTrainer trainer(model, 0.001F);
+        if (argc >= 6 && std::string(argv[5]) != "-") trainer.load_checkpoint(argv[5]);
 
         constexpr std::size_t early_stopping_patience = 3;
         constexpr double minimum_improvement = 1.0e-4;
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
                     best_validation_loss = validation_stats.average_loss;
                     best_validation_stats = validation_stats;
                     stale_epochs = 0;
-                    model.save_checkpoint(argv[2]);
+                    trainer.save_checkpoint(argv[2]);
                     std::cout << " | best checkpoint saved";
                 } else {
                     ++stale_epochs;
