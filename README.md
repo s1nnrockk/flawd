@@ -13,13 +13,13 @@ API and website only after the model runtime is dependable.
 - ReLU, Tanh, LayerNorm, Sequential, and differentiable vector softmax.
 - Numerically stable log-sum-exp cross-entropy and MSE.
 - SGD and Adam optimizers.
-- Configurable multi-head causal self-attention, pre-normalized Transformer blocks, and a compact byte-level Transformer model.
+- Configurable multi-head causal self-attention, pre-normalized Transformer blocks, and a compact Transformer model with byte-level and optional BPE vocabularies.
 - Model checkpoint save/load with version and configuration validation.
 - Next-token training with averaged gradient accumulation (four supervised targets per optimizer update by default) and standalone `flawd_train` executable.
 - Local checkpoint loading and autoregressive generation with temperature and top-k sampling (`flawd_chat`).
 
 ### Python tools
-- Lossless UTF-8 byte tokenizer (IDs 0–255; PAD/BOS/EOS reserved).
+- Lossless UTF-8 byte tokenizer and deterministic BPE tokenizer (PAD/BOS/EOS IDs reserved).
 - JSONL validation, whitespace normalization, and exact deduplication.
 - Export from cleaned JSONL into the versioned binary `.tokens` format, with assistant-only loss masking for role-tagged conversations.
 - The trainer uses system/user messages as context and scores assistant content only; plain text corpora retain ordinary next-token training.
@@ -99,8 +99,7 @@ For a BPE-tokenized checkpoint, pass the matching tokenizer after temperature an
 .\build\Release\flawd_chat.exe .\model.flawd 0.8 40 .\python\tokenizer.bpe
 ```
 
-It accepts repeated prompts in one session and preserves recent conversation context (bounded to eight context windows). Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental byte-level
-baseline, not a ChatGPT/Claude-scale model. Useful language models require much
+It accepts repeated prompts in one session and preserves recent conversation context (bounded to eight context windows). Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental compact Transformer baseline, not a ChatGPT/Claude-scale model. Useful language models require much
 larger licensed datasets, compute, and further engineering.
 
 ## Repository layout
