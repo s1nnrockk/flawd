@@ -56,7 +56,7 @@ def main() -> int:
 
         chat = subprocess.run(
             [str(chat_exe), str(checkpoint), "0", "40", str(tokenizer_path)],
-            input="hello\n\n", capture_output=True, text=True, timeout=60,
+            input="hello\nwhat is 2+2?\n\n", capture_output=True, text=True, timeout=60,
         )
         if (chat.returncode != 0 or "FLAWD local model loaded" not in chat.stdout
                 or chat.stdout.count("You>") < 2):
