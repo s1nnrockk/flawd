@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from flawd.dataset import build_clean_dataset, read_jsonl
+from flawd.dataset import build_clean_dataset, format_conversation, read_jsonl
 
 
 class DatasetTests(unittest.TestCase):
@@ -48,6 +48,25 @@ class DatasetTests(unittest.TestCase):
             build_clean_dataset(source, second_train, second_validation, 0.2, 77)
             self.assertEqual(train.read_text(encoding="utf-8"), second_train.read_text(encoding="utf-8"))
             self.assertEqual(validation.read_text(encoding="utf-8"), second_validation.read_text(encoding="utf-8"))
+
+    def test_formats_conversation_messages_for_assistant_training(self):
+        formatted = format_conversation([
+            {"role": "system", "content": "Be accurate."},
+            {"role": "user", "content": "Write a function."},
+            {"role": "assistant", "content": "def answer():\n    return 42"},
+        ])
+        self.assertTrue(formatted.startswith("<|system|>\nBe accurate.\n<|user|>"))
+        self.assertIn("<|assistant|>\ndef answer():\n    return 42\n", formatted)
+
+    def test_reads_conversation_jsonl(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "conversation.jsonl"
+            source.write_text(json.dumps({"messages": [
+                {"role": "user", "content": "Hi"},
+                {"role": "assistant", "content": "Hello"},
+            ]}) + "\n", encoding="utf-8")
+            text = next(read_jsonl(source))["text"]
+            self.assertEqual(text, "<|user|>\nHi\n<|assistant|>\nHello\n")
 
     def test_rejects_invalid_record(self):
         with tempfile.TemporaryDirectory() as directory:
