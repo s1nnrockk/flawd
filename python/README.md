@@ -58,3 +58,21 @@ count. Train and validation corpora must remain separate.
 
 ByteTokenizer maps UTF-8 bytes to IDs 0–255 and reserves 256, 257, and 258 for
 PAD, BOS, and EOS. Each exported record is wrapped with BOS and EOS.
+
+
+## Byte-pair tokenizer
+
+Train a deterministic BPE vocabulary from a cleaned training dataset:
+
+```powershell
+python -m flawd.tokenizer_cli train.jsonl tokenizer.bpe --vocab-size 512
+python -m flawd.corpus_cli train.jsonl train.tokens --tokenizer tokenizer.bpe
+python -m flawd.corpus_cli validation.jsonl validation.tokens --tokenizer tokenizer.bpe
+```
+
+Use the exact same `.bpe` file for every split and for inference. The portable
+file stores the ordered merge table. Special token IDs remain PAD=256, BOS=257,
+and EOS=258; merged tokens start at 259. The trainer reads vocabulary size from
+the corpus header, and native chat accepts the tokenizer as its final argument.
+The BPE training sample is bounded to 250 KB by default to keep tokenizer
+preparation practical on a CPU.
