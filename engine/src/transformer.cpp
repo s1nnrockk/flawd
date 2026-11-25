@@ -1,5 +1,6 @@
 #include "flawd/transformer.hpp"
 
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 
