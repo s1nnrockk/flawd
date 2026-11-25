@@ -3,7 +3,7 @@ import json
 import random
 import re
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 _ROLE_PATTERN = re.compile(r"<\|(system|user|assistant)\|>\n")
 
@@ -63,8 +63,11 @@ def format_conversation(messages: list[dict[str, str]]) -> str:
     return result
 
 
-def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
+def read_jsonl(path: str | Path) -> Iterator[dict[str, Any]]:
+    """Read normalized text while retaining a small allowlist of provenance fields."""
     file_path = Path(path)
+    provenance_keys = ("source", "license", "source_split", "languages", "category",
+                       "sources", "licenses", "source_splits", "categories")
     with file_path.open("r", encoding="utf-8") as stream:
         for line_number, line in enumerate(stream, start=1):
             if not line.strip():
@@ -94,7 +97,41 @@ def read_jsonl(path: str | Path) -> Iterator[dict[str, str]]:
             else:
                 raise ValueError(f"{file_path}:{line_number}: expected a string 'text' or a 'messages' array")
             if text:
-                yield {"text": text}
+                cleaned = {"text": text}
+                for key in provenance_keys:
+                    if key in record:
+                        cleaned[key] = record[key]
+                yield cleaned
+
+
+def _merge_provenance(target: dict[str, Any], incoming: dict[str, Any]) -> None:
+    """Merge attribution metadata when identical text occurs in multiple sources."""
+    for singular, plural in (
+        ("source", "sources"),
+        ("license", "licenses"),
+        ("source_split", "source_splits"),
+        ("category", "categories"),
+    ):
+        values = []
+        for record in (target, incoming):
+            current = record.get(plural, [])
+            if isinstance(current, list):
+                values.extend(str(value) for value in current if value)
+            value = record.get(singular)
+            if value:
+                values.append(str(value))
+        unique = list(dict.fromkeys(values))
+        if unique:
+            target[singular] = unique[0]
+        if len(unique) > 1:
+            target[plural] = unique
+    languages = []
+    for record in (target, incoming):
+        current = record.get("languages", [])
+        if isinstance(current, list):
+            languages.extend(str(value) for value in current if value)
+    if languages:
+        target["languages"] = sorted(set(languages))
 
 
 def validate_jsonl(path: str | Path) -> int:
@@ -109,15 +146,17 @@ def build_clean_dataset(
     seed: int = 2026,
 ) -> dict[str, int | float]:
     """Normalize and exact-deduplicate records, optionally making a reproducible split."""
-    seen: set[str] = set()
-    records: list[str] = []
+    positions: dict[str, int] = {}
+    records: list[dict[str, Any]] = []
     input_count = 0
     for record in read_jsonl(source):
         input_count += 1
         text = record["text"]
-        if text not in seen:
-            seen.add(text)
-            records.append(text)
+        if text not in positions:
+            positions[text] = len(records)
+            records.append(dict(record))
+        else:
+            _merge_provenance(records[positions[text]], record)
 
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,7 +166,7 @@ def build_clean_dataset(
             raise ValueError("Source and output paths must be different")
         with destination_path.open("w", encoding="utf-8", newline="\n") as output:
             for text in records:
-                output.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+                output.write(json.dumps(record, ensure_ascii=False) + "\n")
         return {
             "input_records": input_count,
             "output_records": len(records),
