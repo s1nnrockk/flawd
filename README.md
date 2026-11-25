@@ -135,3 +135,9 @@ FLAWD includes a fast web-search prototype with concurrent page retrieval and a 
 ### Local web research API
 
 Run `python -m flawd.web_api --port 8765` from the `python` directory to expose the retrieval backend to a local web interface at `http://127.0.0.1:8765`. It provides `/health`, `/api/search`, and `/api/knowledge`; search results are cached briefly and fetched pages are indexed locally. See [docs/WEB_API.md](docs/WEB_API.md). The service binds to loopback and is not intended to be exposed publicly.
+
+## Licensed instruction corpus expansion
+
+The data pipeline supports importing OpenAssistant OASST1 (Apache-2.0) and, optionally, Databricks Dolly 15k (CC BY-SA 3.0), alongside the curated FLAWD seed set. It filters low-quality OASST annotations, preserves the official OASST validation split, creates a deterministic held-out split for Dolly, and removes exact duplicates across train/validation.
+
+See [docs/OASST1_IMPORT.md](docs/OASST1_IMPORT.md). To prepare the corpus without installing dataset dependencies locally, open **Actions → FLAWD corpus preparation → Run workflow**. The workflow downloads and prepares the data, fits BPE on training data only, exports train/validation token files, and uploads a 30-day artifact. It does not train a model. Review the corpus manifest and counts before starting training.
