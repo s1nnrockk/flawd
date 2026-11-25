@@ -491,7 +491,10 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
     char trailing = 0;
     if (input.read(&trailing, 1))
         throw std::runtime_error("Checkpoint contains unexpected trailing data");
-    if (has_optimizer_state && optimizer) optimizer->load_state(optimizer_state);
+    if (optimizer) {
+        if (has_optimizer_state) optimizer->load_state(optimizer_state);
+        else optimizer->reset_state();
+    }
     for (std::size_t i = 0; i < model_parameters.size(); ++i)
         model_parameters[i].set_value(values[i]);
 }
