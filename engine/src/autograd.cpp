@@ -24,7 +24,7 @@ void Scalar::set_value(float value) {
 }
 void Scalar::zero_grad() noexcept { node_->gradient = 0.0F; }
 
-void Scalar::backward() {
+void Scalar::backward() const {
     std::vector<std::shared_ptr<Node>> ordered;
     std::vector<std::shared_ptr<Node>> visited;
     std::function<void(const std::shared_ptr<Node>&)> visit = [&](const auto& node) {
