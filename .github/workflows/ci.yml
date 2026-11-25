@@ -18,6 +18,8 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Trainer CLI checkpoint and resume integration
+        run: python python/train_cli_integration.py --trainer build/Release/flawd_train.exe
       - name: BPE end-to-end integration
         run: python python/bpe_integration.py
 
