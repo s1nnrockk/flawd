@@ -10,7 +10,7 @@ local training and inference are reliable.
 - Linear, Embedding, LayerNorm, activation layers, stable cross entropy, SGD, and Adam.
 - Transformer with token/position embeddings, causal multi-head attention,
   pre-normalized residual blocks, feed-forward layers, and vocabulary projection.
-- Versioned checkpoints with model-configuration and size validation; inference can inspect checkpoint dimensions before constructing the model.
+- Version 4 atomic checkpoints can include Adam moments, hyperparameters, and update count; version 2/3 weights-only checkpoints remain readable. Inference can inspect checkpoint dimensions before constructing the model.
 - Configurable context length, embedding width, feed-forward width, layer count, and attention-head count in the training CLI.
 - Autoregressive local inference with temperature and top-k sampling.
 - Next-token training and held-out evaluation, both supporting per-token loss masks.
