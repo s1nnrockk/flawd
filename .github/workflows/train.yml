@@ -38,10 +38,10 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path training-run | Out-Null
-          python -m flawd.dataset_cli ../data/seed/flawd-instructions-v1.jsonl training-run/train.jsonl --validation-output training-run/validation.jsonl --validation-ratio 0.10 --seed 2026
+          python -m flawd.dataset_cli ../data/seed/flawd-instructions-v2.jsonl training-run/train.jsonl --validation-output training-run/validation.jsonl --validation-ratio 0.10 --seed 2026
           python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 512 --max-training-bytes 250000
-          python -m flawd.corpus_cli training-run/train.jsonl training-run/train.tokens --tokenizer training-run/tokenizer.bpe --source-description "Original FLAWD bilingual instruction seed corpus v1; training split" --license MIT --language "ru,en"
-          python -m flawd.corpus_cli training-run/validation.jsonl training-run/validation.tokens --tokenizer training-run/tokenizer.bpe --source-description "Held-out conversation-level validation split from FLAWD seed corpus v1" --license MIT --language "ru,en"
+          python -m flawd.corpus_cli training-run/train.jsonl training-run/train.tokens --tokenizer training-run/tokenizer.bpe --source-description "Original FLAWD bilingual instruction seed corpus v2; training split" --license MIT --language "ru,en"
+          python -m flawd.corpus_cli training-run/validation.jsonl training-run/validation.tokens --tokenizer training-run/tokenizer.bpe --source-description "Held-out conversation-level validation split from FLAWD seed corpus v2" --license MIT --language "ru,en"
 
       - name: Train model and preserve validation-best checkpoint
         working-directory: python
@@ -56,7 +56,7 @@ jobs:
         run: |
           @"
           FLAWD seed training run
-          Dataset: data/seed/flawd-instructions-v1.jsonl
+          Dataset: data/seed/flawd-instructions-v2.jsonl
           Dataset revision: ${{ github.sha }}
           Split: deterministic, 90% train / 10% validation, seed 2026
           Tokenizer: byte-level BPE, target vocabulary 512, fitted on training split only
