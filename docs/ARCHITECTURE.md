@@ -17,6 +17,7 @@ local training and inference are reliable.
   pre-normalized residual blocks, feed-forward layers, and vocabulary projection.
 - Checkpoints: versioned binary weights with model-configuration and size checks.
 - Trainer: next-token prediction using cross entropy and Adam, plus held-out loss evaluation without optimizer updates.
+- Inference: autoregressive generation with temperature and top-k sampling; zero temperature selects greedy decoding.
 
 Conversation records support system/user/assistant markers for consistent chat formatting. The current objective still trains on every serialized token; assistant-only loss masking and true supervised instruction tuning are future milestones, not implemented features.
 
