@@ -36,6 +36,28 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(manifest["license"], "CC0-1.0")
             self.assertEqual(manifest["language"], "en")
 
+    def test_empty_dataset_is_rejected_without_replacing_existing_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "empty.jsonl"
+            output = Path(directory) / "existing.tokens"
+            source.write_text("", encoding="utf-8")
+            output.write_bytes(b"previous-valid-output")
+            with self.assertRaisesRegex(ValueError, "empty dataset"):
+                tokenize_jsonl(source, output)
+            self.assertEqual(output.read_bytes(), b"previous-valid-output")
+            self.assertFalse(list(Path(directory).glob("existing.tokens.*.tmp")))
+
+    def test_invalid_input_does_not_leave_partial_token_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "broken.jsonl"
+            output = Path(directory) / "data.tokens"
+            source.write_text(json.dumps({"text": "valid first record"}) + "\n{broken json}\n",
+                              encoding="utf-8")
+            with self.assertRaises(ValueError):
+                tokenize_jsonl(source, output)
+            self.assertFalse(output.exists())
+            self.assertFalse(list(Path(directory).glob("data.tokens.*.tmp")))
+
     def test_conversation_masks_only_assistant_content(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "conversation.jsonl"
