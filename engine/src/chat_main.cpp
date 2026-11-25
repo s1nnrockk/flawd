@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     }
     try {
         const float temperature = argc >= 3 ? std::stof(argv[2]) : 0.8F;
-        const std::size_t top_k = argc == 4 ? static_cast<std::size_t>(std::stoull(argv[3])) : 40;
+        const std::size_t top_k = argc >= 4 ? static_cast<std::size_t>(std::stoull(argv[3])) : 40;
         if (!std::isfinite(temperature) || temperature < 0.0F)
             throw std::invalid_argument("Temperature must be a finite non-negative number");
         if (top_k == 0) throw std::invalid_argument("top_k must be positive");
