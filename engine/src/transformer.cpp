@@ -474,8 +474,10 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
             if (moment_count != count ||
                 moment_count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
                 throw std::runtime_error("Checkpoint Adam moment count does not match model parameters");
-            optimizer_state.first_moment.reserve(static_cast<std::size_t>(moment_count));
-            optimizer_state.second_moment.reserve(static_cast<std::size_t>(moment_count));
+            if (optimizer) {
+                optimizer_state.first_moment.reserve(static_cast<std::size_t>(moment_count));
+                optimizer_state.second_moment.reserve(static_cast<std::size_t>(moment_count));
+            }
             for (std::size_t index = 0; index < static_cast<std::size_t>(moment_count); ++index) {
                 float first = 0.0F;
                 float second = 0.0F;
@@ -483,8 +485,10 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
                 read(second);
                 if (!std::isfinite(first) || !std::isfinite(second) || second < 0.0F)
                     throw std::runtime_error("Checkpoint contains invalid Adam moments");
-                optimizer_state.first_moment.push_back(first);
-                optimizer_state.second_moment.push_back(second);
+                if (optimizer) {
+                    optimizer_state.first_moment.push_back(first);
+                    optimizer_state.second_moment.push_back(second);
+                }
             }
         }
     }
