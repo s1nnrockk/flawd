@@ -62,7 +62,7 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
 
 int main(int argc, char** argv) {
     if (argc < 3 || argc > 5) {
-        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\\n";
+        std::cerr << "Usage: flawd_train <train.tokens> <model.flawd> [epochs] [validation.tokens]\n";
         return 2;
     }
     try {
@@ -90,17 +90,17 @@ int main(int argc, char** argv) {
             validation_stats = trainer.evaluate(validation.tokens, validation.loss_mask);
         model.save_checkpoint(argv[2]);
 
-        std::cout << "FLAWD training complete\\n"
-                  << "Steps: " << stats.steps << "\\n"
-                  << "Training loss: " << stats.average_loss << "\\n";
+        std::cout << "FLAWD training complete\n"
+                  << "Steps: " << stats.steps << "\n"
+                  << "Training loss: " << stats.average_loss << "\n";
         if (argc == 5) {
-            std::cout << "Validation steps: " << validation_stats.steps << "\\n"
-                      << "Validation loss: " << validation_stats.average_loss << "\\n";
+            std::cout << "Validation steps: " << validation_stats.steps << "\n"
+                      << "Validation loss: " << validation_stats.average_loss << "\n";
         }
-        std::cout << "Checkpoint: " << argv[2] << "\\n";
+        std::cout << "Checkpoint: " << argv[2] << "\n";
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "FLAWD training error: " << error.what() << '\\n';
+        std::cerr << "FLAWD training error: " << error.what() << '\n';
         return 1;
     }
 }
