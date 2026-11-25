@@ -49,6 +49,24 @@ class DatasetTests(unittest.TestCase):
             self.assertEqual(train.read_text(encoding="utf-8"), second_train.read_text(encoding="utf-8"))
             self.assertEqual(validation.read_text(encoding="utf-8"), second_validation.read_text(encoding="utf-8"))
 
+    def test_deterministic_shuffle_changes_record_order_reproducibly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "raw.jsonl"
+            first = root / "first.jsonl"
+            second = root / "second.jsonl"
+            source.write_text(
+                "".join(json.dumps({"text": f"record {index}"}) + "\n" for index in range(30)),
+                encoding="utf-8",
+            )
+            build_clean_dataset(source, first, shuffle_seed=1234)
+            build_clean_dataset(source, second, shuffle_seed=1234)
+            first_records = list(read_jsonl(first))
+            second_records = list(read_jsonl(second))
+            self.assertEqual(first_records, second_records)
+            self.assertNotEqual([row["text"] for row in first_records],
+                                [f"record {index}" for index in range(30)])
+
     def test_cleaning_preserves_and_merges_source_license_provenance(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
