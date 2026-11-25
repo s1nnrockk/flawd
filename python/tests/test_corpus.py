@@ -23,7 +23,7 @@ class CorpusTests(unittest.TestCase):
             self.assertEqual(vocab, ByteTokenizer.VOCAB_SIZE)
             self.assertEqual(count, 3)
             token_ids = struct.unpack("<3H", payload[24:])
-            self.assertEqual(token_ids, [72, 105, ByteTokenizer.EOS_ID])
+            self.assertEqual(list(token_ids), [72, 105, ByteTokenizer.EOS_ID])
             self.assertTrue(output.with_suffix(".tokens.json").exists())
 
 
