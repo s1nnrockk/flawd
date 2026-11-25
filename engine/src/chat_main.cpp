@@ -1,9 +1,11 @@
 #include "flawd/transformer.hpp"
+#include "flawd/tokenizer.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -41,8 +43,8 @@ std::size_t sample_next_token(const flawd::ScalarVector& logits, float temperatu
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2 || argc > 4) {
-        std::cerr << "Usage: flawd_chat <model.flawd> [temperature] [top_k]\n";
+    if (argc < 2 || argc > 5) {
+        std::cerr << "Usage: flawd_chat <model.flawd> [temperature] [top_k] [tokenizer.bpe]\n";
         return 2;
     }
     try {
@@ -53,6 +55,14 @@ int main(int argc, char** argv) {
         if (top_k == 0) throw std::invalid_argument("top_k must be positive");
         std::mt19937 random(2026);
         const auto config = flawd::TransformerModel::read_checkpoint_config(argv[1]);
+        std::unique_ptr<flawd::ByteBPETokenizer> bpe_tokenizer;
+        if (argc == 5) {
+            bpe_tokenizer = std::make_unique<flawd::ByteBPETokenizer>(argv[4]);
+            if (bpe_tokenizer->vocabulary_size() != config.vocabulary_size)
+                throw std::invalid_argument("BPE tokenizer vocabulary does not match checkpoint");
+        } else if (config.vocabulary_size != 259) {
+            throw std::invalid_argument("This checkpoint requires its matching .bpe tokenizer file");
+        }
         flawd::TransformerModel model(config);
         model.load_checkpoint(argv[1]);
 
@@ -64,7 +74,12 @@ int main(int argc, char** argv) {
             tokens.reserve(prompt.size() + 128);
             tokens.push_back(257);
             const std::string formatted_prompt = "<|user|>\n" + prompt + "\n<|assistant|>\n";
-            for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
+            if (bpe_tokenizer) {
+                const auto encoded = bpe_tokenizer->encode(formatted_prompt);
+                tokens.insert(tokens.end(), encoded.begin(), encoded.end());
+            } else {
+                for (const unsigned char byte : formatted_prompt) tokens.push_back(byte);
+            }
             std::cout << "FLAWD> " << std::flush;
 
             for (std::size_t step = 0; step < 128; ++step) {
@@ -77,7 +92,11 @@ int main(int argc, char** argv) {
                 if (next_token == 258 || next_token == 257) break;
                 if (next_token == 256) continue;
                 tokens.push_back(next_token);
-                if (next_token <= 255) std::cout << static_cast<char>(next_token) << std::flush;
+                if (next_token <= 255) {
+                    std::cout << static_cast<char>(next_token) << std::flush;
+                } else if (bpe_tokenizer && next_token >= 259) {
+                    std::cout << bpe_tokenizer->decode(next_token) << std::flush;
+                }
             }
             std::cout << '\n';
         }
