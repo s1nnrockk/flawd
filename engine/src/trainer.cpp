@@ -16,8 +16,8 @@ float LanguageModelTrainer::train_step(const std::vector<std::size_t>& input_tok
         throw std::out_of_range("Training target token is outside the vocabulary");
 
     optimizer_.zero_grad();
-    const auto logits = model_.forward(input_tokens);
-    const auto loss = cross_entropy_loss(logits.back(), target_token);
+    const auto logits = model_.forward_last(input_tokens);
+    const auto loss = cross_entropy_loss(logits, target_token);
     const float loss_value = loss.value();
     loss.backward();
     optimizer_.step();
