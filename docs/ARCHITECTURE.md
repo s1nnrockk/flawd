@@ -24,7 +24,9 @@ training. The C++ trainer accepts both masked and legacy unmasked streams;
 FLAWDTOK v1 files are interpreted as all-target corpora.
 
 This implements assistant-only loss masking, a necessary supervised
-instruction-tuning primitive. It does not by itself provide a high-quality
+instruction-tuning primitive. Conversation records are structurally validated:
+roles alternate, an optional system message appears only first, every message
+has content, and the final turn is an assistant response. It does not by itself provide a high-quality
 assistant: results still depend on sufficient licensed data, model capacity,
 training duration, and rigorous evaluation.
 
