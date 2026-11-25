@@ -15,12 +15,21 @@ python -m unittest discover -s tests -v
 
 ## Dataset format
 
-UTF-8 JSON Lines, one object per line:
+UTF-8 JSON Lines. Plain-text records are supported:
 
 ```json
 {"text":"A training passage with documented usage rights."}
-{"text":"Another passage."}
 ```
+
+Instruction-tuning conversations can use role-tagged messages. The serializer
+preserves message line breaks (important for code examples):
+
+```json
+{"messages":[{"role":"system","content":"Be helpful and accurate."},{"role":"user","content":"Explain this function."},{"role":"assistant","content":"It returns a value."}]}
+```
+
+Roles currently supported: system, user, and assistant. Conversation data is
+serialized using role markers, the same markers used by the chat prompt.
 
 ## Prepare a corpus
 
