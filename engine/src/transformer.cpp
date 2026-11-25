@@ -17,6 +17,11 @@
 
 namespace flawd {
 namespace {
+ModelConfig validated_config(ModelConfig config) {
+    config.validate();
+    return config;
+}
+
 void validate_sequence(const Sequence& sequence, std::size_t width) {
     if (sequence.empty()) throw std::invalid_argument("Transformer sequence cannot be empty");
     for (const auto& token : sequence)
@@ -67,6 +72,9 @@ void ModelConfig::validate() const {
     if (estimated_parameters >
         static_cast<long double>(std::numeric_limits<std::size_t>::max()))
         throw std::length_error("Transformer dimensions exceed addressable parameter storage");
+    constexpr long double maximum_parameters = 5'000'000.0L;
+    if (estimated_parameters > maximum_parameters)
+        throw std::length_error("Transformer exceeds the 5-million-parameter safety limit");
 }
 
 CausalSelfAttention::CausalSelfAttention(std::size_t embedding_size, std::size_t head_count,
@@ -238,12 +246,11 @@ std::vector<Scalar> TransformerBlock::parameters() {
 }
 
 TransformerModel::TransformerModel(ModelConfig config)
-    : config_(std::move(config)),
+    : config_(validated_config(std::move(config))),
       token_embedding_(config_.vocabulary_size, config_.embedding_size, config_.seed),
       position_embedding_(config_.context_length, config_.embedding_size, config_.seed + 100),
       final_norm_(config_.embedding_size),
       language_head_(config_.embedding_size, config_.vocabulary_size, config_.seed + 200) {
-    config_.validate();
     blocks_.reserve(config_.layer_count);
     for (std::size_t i = 0; i < config_.layer_count; ++i)
         blocks_.emplace_back(config_.embedding_size, config_.feed_forward_size,
