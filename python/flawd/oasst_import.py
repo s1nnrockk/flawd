@@ -12,7 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
-from .dataset import format_conversation
+from .dataset import format_conversation, merge_provenance
 
 DATASET_ID = "OpenAssistant/oasst1"
 LANGUAGE_MAP = {"en": "en", "ru": "ru"}
@@ -199,20 +199,27 @@ def _deduplicate_splits(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, int]]:
     # Validation takes precedence so an identical sample can never leak into training.
     unique_validation: list[dict[str, Any]] = []
-    validation_keys: set[str] = set()
+    validation_by_key: dict[str, dict[str, Any]] = {}
     for record in validation:
         key = _record_key(record)
-        if key not in validation_keys:
-            validation_keys.add(key)
+        if key not in validation_by_key:
+            validation_by_key[key] = record
             unique_validation.append(record)
+        else:
+            merge_provenance(validation_by_key[key], record)
 
     unique_train: list[dict[str, Any]] = []
-    train_keys: set[str] = set()
+    train_by_key: dict[str, dict[str, Any]] = {}
     for record in train:
         key = _record_key(record)
-        if key not in validation_keys and key not in train_keys:
-            train_keys.add(key)
+        if key in validation_by_key:
+            # Validation retains the sample, but keeps attribution from both splits.
+            merge_provenance(validation_by_key[key], record)
+        elif key not in train_by_key:
+            train_by_key[key] = record
             unique_train.append(record)
+        else:
+            merge_provenance(train_by_key[key], record)
 
     return unique_train, unique_validation, {
         "train_duplicates_removed": len(train) - len(unique_train),
