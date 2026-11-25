@@ -47,6 +47,15 @@ def main() -> int:
         tokenize_jsonl(train_jsonl, train_tokens, tokenizer_path=tokenizer_path)
         tokenize_jsonl(validation_jsonl, validation_tokens, tokenizer_path=tokenizer_path)
 
+        overwrite_guard = subprocess.run(
+            [str(train_exe), str(train_tokens), str(train_tokens)],
+            capture_output=True, text=True, timeout=30,
+        )
+        if (overwrite_guard.returncode == 0
+                or "must not overwrite the training corpus" not in overwrite_guard.stderr
+                or not train_tokens.is_file()):
+            raise RuntimeError("Trainer did not protect its source corpus from checkpoint overwrite")
+
         training = subprocess.run(
             [str(train_exe), str(train_tokens), str(checkpoint), "1", str(validation_tokens),
              "-", "64", "8", "16", "1", "4"],
