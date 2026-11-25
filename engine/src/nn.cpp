@@ -183,8 +183,13 @@ float SGD::learning_rate() const noexcept { return learning_rate_; }
 Scalar cross_entropy_loss(const ScalarVector& logits, std::size_t target_index) {
     if (logits.empty()) throw std::invalid_argument("Cross entropy expects non-empty logits");
     if (target_index >= logits.size()) throw std::out_of_range("Cross entropy target index is out of range");
-    const auto probabilities = softmax(logits);
-    return Scalar(0.0F) - flawd::log(probabilities[target_index]);
+    float maximum = logits.front().value();
+    for (const auto& value : logits)
+        if (value.value() > maximum) maximum = value.value();
+    Scalar exponential_sum(0.0F);
+    for (const auto& value : logits)
+        exponential_sum = exponential_sum + flawd::exp(value - Scalar(maximum));
+    return Scalar(maximum) + flawd::log(exponential_sum) - logits[target_index];
 }
 
 Adam::Adam(std::vector<Scalar> parameters, float learning_rate, float beta1,
