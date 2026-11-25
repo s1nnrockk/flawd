@@ -96,6 +96,8 @@ class ByteBPETokenizer(ByteTokenizer):
             total_bytes += len(encoded)
             if encoded:
                 sequences.append(list(encoded))
+        if not sequences:
+            raise ValueError("BPE training dataset contains no text bytes")
         merges = []
         while 259 + len(merges) < vocab_size:
             counts = Counter()
