@@ -116,3 +116,6 @@ larger licensed datasets, compute, and further engineering.
 
 Use datasets with documented sources and usage permissions. Never commit
 private datasets, personal data, passwords, private keys, or API secrets.
+
+
+The current CPU trainer loads each token corpus into memory and rejects files above 20 million tokens. Larger corpora will require a streaming or sharded training loader rather than increasing this limit blindly.
