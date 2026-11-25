@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -110,6 +111,16 @@ int main(int argc, char** argv) {
             if (generated_text.empty() || generated_text.back() != '\n')
                 append_text("\n");
             std::cout << '\n';
+            const std::size_t history_limit =
+                config.context_length > std::numeric_limits<std::size_t>::max() / 8
+                    ? std::numeric_limits<std::size_t>::max()
+                    : config.context_length * 8;
+            if (conversation_tokens.size() > history_limit) {
+                const auto excess = conversation_tokens.size() - history_limit;
+                conversation_tokens.erase(
+                    conversation_tokens.begin(),
+                    conversation_tokens.begin() + static_cast<std::ptrdiff_t>(excess));
+            }
         }
         return 0;
     } catch (const std::exception& error) {
