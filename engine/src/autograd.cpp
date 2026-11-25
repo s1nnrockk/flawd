@@ -3,6 +3,7 @@
 #include <functional>
 #include <stdexcept>
 #include <utility>
+#include <unordered_set>
 
 namespace flawd {
 struct Scalar::Node {
