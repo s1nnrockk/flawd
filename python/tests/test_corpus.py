@@ -79,6 +79,7 @@ class CorpusTests(unittest.TestCase):
             manifest = json.loads(output.with_suffix(".tokens.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["tokenizer"], tokenizer.NAME)
             self.assertEqual(manifest["vocabulary_size"], tokenizer.VOCAB_SIZE)
+            self.assertEqual(manifest["tokenizer_fingerprint"], tokenizer.fingerprint)
 
     def test_bpe_conversation_mask_never_crosses_role_boundaries(self):
         with tempfile.TemporaryDirectory() as directory:
