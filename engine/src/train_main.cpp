@@ -1,6 +1,7 @@
 #include "flawd/trainer.hpp"
 
 #include <cstdint>
+#include <chrono>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
@@ -191,6 +192,7 @@ int main(int argc, char** argv) {
         }
 
         constexpr std::size_t gradient_accumulation = 4;
+        const auto training_started = std::chrono::steady_clock::now();
         for (std::size_t epoch = 1; epoch <= epochs; ++epoch) {
             const auto epoch_stats = trainer.train(training.tokens, training.loss_mask, 1, 1,
                                                    gradient_accumulation);
@@ -224,9 +226,15 @@ int main(int argc, char** argv) {
         }
 
         if (!has_validation) trainer.save_checkpoint(argv[2]);
+        const double elapsed_seconds = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - training_started).count();
+        const double supervised_targets_per_second = elapsed_seconds > 0.0
+            ? static_cast<double>(total_steps) / elapsed_seconds : 0.0;
         std::cout << "FLAWD training complete\n"
                   << "Steps: " << total_steps << "\n"
-                  << "Training loss: " << (total_loss / static_cast<double>(total_steps)) << "\n";
+                  << "Training loss: " << (total_loss / static_cast<double>(total_steps)) << "\n"
+                  << "Elapsed seconds: " << elapsed_seconds << "\n"
+                  << "Supervised targets/second: " << supervised_targets_per_second << "\n";
         if (has_validation) {
             std::cout << "Best validation steps: " << best_validation_stats.steps << "\n"
                       << "Best validation loss: " << best_validation_loss << "\n";
