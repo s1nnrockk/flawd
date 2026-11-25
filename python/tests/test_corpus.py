@@ -81,10 +81,10 @@ class CorpusTests(unittest.TestCase):
             flags = [item[1] for item in records]
             decoded = ByteTokenizer().decode(ids[1:-1])
             for user_text in ("Привет", "Ещё вопрос"):
-                start = decoded.index(user_text)
+                start = len(decoded[:decoded.index(user_text)].encode("utf-8"))
                 self.assertFalse(any(flags[1 + start:1 + start + len(user_text.encode("utf-8"))]))
             for assistant_text in ("Здравствуйте\n", "Ответ готов\n"):
-                start = decoded.index(assistant_text)
+                start = len(decoded[:decoded.index(assistant_text)].encode("utf-8"))
                 end = start + len(assistant_text.encode("utf-8"))
                 self.assertTrue(all(flags[1 + start:1 + end]))
             self.assertEqual(flags[-1], 1)
