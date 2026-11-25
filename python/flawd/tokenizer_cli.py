@@ -1,6 +1,7 @@
 """Train and save a deterministic byte-pair tokenizer from cleaned JSONL."""
 import argparse
 import json
+import random
 
 from .dataset import read_jsonl
 from .tokenizer import ByteBPETokenizer
@@ -18,8 +19,11 @@ def main() -> int:
                         help="Minimum pair frequency for a merge (default: 2)")
     parser.add_argument("--max-training-bytes", type=int, default=250_000,
                         help="Maximum UTF-8 bytes used to train the tokenizer")
+    parser.add_argument("--shuffle-seed", type=int, default=2026,
+                        help="Deterministic record shuffle seed to avoid language/order bias")
     args = parser.parse_args()
-    records = read_jsonl(args.input)
+    records = list(read_jsonl(args.input))
+    random.Random(args.shuffle_seed).shuffle(records)
     tokenizer = ByteBPETokenizer.train(
         (record["text"] for record in records),
         vocab_size=args.vocab_size,
@@ -31,6 +35,8 @@ def main() -> int:
         "tokenizer": tokenizer.NAME,
         "vocabulary_size": tokenizer.VOCAB_SIZE,
         "merge_count": len(tokenizer.merges),
+        "training_records_shuffled": len(records),
+        "shuffle_seed": args.shuffle_seed,
         "output": args.output,
     }, ensure_ascii=False, indent=2))
     return 0
