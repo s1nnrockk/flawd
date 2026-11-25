@@ -1,6 +1,9 @@
 #include "flawd/transformer.hpp"
 
 #include <cmath>
+#include <array>
+#include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -174,6 +177,82 @@ std::vector<Scalar> TransformerModel::parameters() {
     append_parameters(result, language_head_.parameters());
     return result;
 }
+
 const ModelConfig& TransformerModel::config() const noexcept { return config_; }
+
+void TransformerModel::save_checkpoint(const std::string& path) {
+    std::ofstream output(path, std::ios::binary);
+    if (!output) throw std::runtime_error("Unable to open checkpoint for writing");
+    const std::array<char, 8> magic{{'F','L','A','W','D','C','K','P'}};
+    const std::uint32_t version = 1;
+    const auto write = [&](const auto& value) {
+        output.write(reinterpret_cast<const char*>(&value), sizeof(value));
+    };
+    output.write(magic.data(), static_cast<std::streamsize>(magic.size()));
+    write(version);
+    write(config_.vocabulary_size);
+    write(config_.context_length);
+    write(config_.embedding_size);
+    write(config_.feed_forward_size);
+    write(config_.layer_count);
+    write(config_.seed);
+    auto model_parameters = parameters();
+    const std::uint64_t count = static_cast<std::uint64_t>(model_parameters.size());
+    write(count);
+    for (const auto& parameter : model_parameters) {
+        const float value = parameter.value();
+        write(value);
+    }
+    if (!output) throw std::runtime_error("Failed while writing model checkpoint");
+}
+
+void TransformerModel::load_checkpoint(const std::string& path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) throw std::runtime_error("Unable to open checkpoint for reading");
+    const auto read = [&](auto& value) {
+        input.read(reinterpret_cast<char*>(&value), sizeof(value));
+        if (!input) throw std::runtime_error("Checkpoint is truncated or unreadable");
+    };
+    std::array<char, 8> magic{};
+    input.read(magic.data(), static_cast<std::streamsize>(magic.size()));
+    const std::array<char, 8> expected{{'F','L','A','W','D','C','K','P'}};
+    if (!input || magic != expected) throw std::runtime_error("Invalid FLAWD checkpoint file");
+    std::uint32_t version = 0;
+    read(version);
+    if (version != 1) throw std::runtime_error("Unsupported FLAWD checkpoint version");
+
+    ModelConfig stored;
+    read(stored.vocabulary_size);
+    read(stored.context_length);
+    read(stored.embedding_size);
+    read(stored.feed_forward_size);
+    read(stored.layer_count);
+    read(stored.seed);
+    if (stored.vocabulary_size != config_.vocabulary_size ||
+        stored.context_length != config_.context_length ||
+        stored.embedding_size != config_.embedding_size ||
+        stored.feed_forward_size != config_.feed_forward_size ||
+        stored.layer_count != config_.layer_count)
+        throw std::runtime_error("Checkpoint model configuration does not match this model");
+
+    std::uint64_t count = 0;
+    read(count);
+    auto model_parameters = parameters();
+    if (count != static_cast<std::uint64_t>(model_parameters.size()))
+        throw std::runtime_error("Checkpoint parameter count does not match this model");
+    std::vector<float> values;
+    values.reserve(model_parameters.size());
+    for (std::size_t i = 0; i < model_parameters.size(); ++i) {
+        float value = 0.0F;
+        read(value);
+        if (!std::isfinite(value)) throw std::runtime_error("Checkpoint contains a non-finite weight");
+        values.push_back(value);
+    }
+    char trailing = 0;
+    if (input.read(&trailing, 1)) throw std::runtime_error("Checkpoint contains unexpected trailing data");
+    for (std::size_t i = 0; i < model_parameters.size(); ++i)
+        model_parameters[i].set_value(values[i]);
+}
+
 
 } // namespace flawd
