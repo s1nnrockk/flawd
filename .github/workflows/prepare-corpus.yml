@@ -40,13 +40,15 @@ jobs:
 
       - name: Download and combine OASST1, Dolly, and FLAWD seed
         working-directory: python
-        run: >-
-          python -m flawd.oasst_import
-          --languages ru,en
-          --include-dolly
-          --seed-jsonl ../data/seed/flawd-instructions-v2.jsonl
-          --train-output training-run/raw-train.jsonl
-          --validation-output training-run/raw-validation.jsonl
+        run: |
+          mkdir -p training-run
+          python -m flawd.oasst_import \
+            --languages ru,en \
+            --include-dolly \
+            --seed-jsonl ../data/seed/flawd-instructions-v2.jsonl \
+            --train-output training-run/raw-train.jsonl \
+            --validation-output training-run/raw-validation.jsonl \
+            > training-run/IMPORT_REPORT.json
 
       - name: Validate, normalize, and deduplicate corpus splits
         working-directory: python
@@ -70,6 +72,7 @@ jobs:
           from pathlib import Path
           from flawd.dataset import validate_jsonl
           root = Path("training-run")
+          import_report = json.loads((root / "IMPORT_REPORT.json").read_text(encoding="utf-8"))
           def language_counts(path):
               counts = {}
               for line in path.read_text(encoding="utf-8").splitlines():
@@ -86,6 +89,7 @@ jobs:
                   {"id": "databricks/databricks-dolly-15k", "license": "CC-BY-SA-3.0", "languages": ["en"]},
                   {"id": "FLAWD curated seed v2", "license": "Not separately declared; project-owned seed data", "languages": ["ru"]}
               ],
+              "import_report": import_report,
               "train_records": validate_jsonl(root / "train.jsonl"),
               "validation_records": validate_jsonl(root / "validation.jsonl"),
               "source_train_records_by_language": language_counts(root / "raw-train.jsonl"),
@@ -94,6 +98,10 @@ jobs:
               "note": "Prepared corpus artifact; not a trained model checkpoint."
           }
           (root / "CORPUS_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+          train_languages = manifest["source_train_records_by_language"]
+          assert train_languages.get("ru", 0) > 0, "No Russian training records"
+          assert train_languages.get("en", 0) > 0, "No English training records"
+          assert manifest["validation_records"] > 10, "Validation corpus is too small"
           print(json.dumps(manifest, ensure_ascii=False, indent=2))
           PY
 
@@ -110,5 +118,6 @@ jobs:
             python/training-run/train.tokens.json
             python/training-run/validation.tokens.json
             python/training-run/CORPUS_MANIFEST.json
+            python/training-run/IMPORT_REPORT.json
           if-no-files-found: error
           retention-days: 30
