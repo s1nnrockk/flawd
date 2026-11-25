@@ -16,14 +16,16 @@ local training and inference are reliable.
 - Transformer: token and position embeddings, causal multi-head self-attention,
   pre-normalized residual blocks, feed-forward layers, and vocabulary projection.
 - Checkpoints: versioned binary weights with model-configuration and size checks.
-- Trainer: next-token prediction using cross entropy and Adam.
+- Trainer: next-token prediction using cross entropy and Adam, plus held-out loss evaluation without optimizer updates.
+
+Conversation records support system/user/assistant markers for consistent chat formatting. The current objective still trains on every serialized token; assistant-only loss masking and true supervised instruction tuning are future milestones, not implemented features.
 
 The current Transformer supports configurable multi-head causal attention. It remains a small experimental baseline, not a production-scale architecture.
 
 ## Python data pipeline
 
 - ByteTokenizer: UTF-8 byte IDs 0–255 and reserved PAD/BOS/EOS IDs.
-- Dataset tools: JSONL validation, whitespace normalization, exact deduplication.
+- Dataset tools: JSONL validation, whitespace normalization, exact deduplication, deterministic document-level train/validation splitting, and role-tagged conversation serialization.
 - Corpus export: writes the FLAWDTOK binary stream consumed by the C++ trainer.
 - The token file header is little-endian: 8-byte magic, uint32 version, uint32
   vocabulary size, uint64 token count, then uint16 token IDs.
