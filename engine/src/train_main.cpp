@@ -127,6 +127,9 @@ int main(int argc, char** argv) {
             if (std::filesystem::equivalent(argv[1], argv[4], path_error) && !path_error)
                 throw std::invalid_argument("Training and validation files must be different");
             validation = load_tokens(argv[4], config.vocabulary_size);
+            if (training.tokens == validation.tokens &&
+                training.loss_mask == validation.loss_mask)
+                throw std::invalid_argument("Training and validation corpora contain identical data");
         }
 
         flawd::TransformerModel model(config);
