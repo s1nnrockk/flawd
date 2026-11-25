@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <fstream>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -35,6 +36,16 @@ int main() {
     flawd::ByteBPETokenizer tokenizer(path);
     if (tokenizer.vocabulary_size() != 263)
         throw std::runtime_error("BPE vocabulary size was read incorrectly");
+    std::uint64_t expected_fingerprint = 14695981039346656037ULL;
+    {
+        std::ifstream input(path, std::ios::binary);
+        char byte = 0;
+        while (input.get(byte))
+            expected_fingerprint = (expected_fingerprint ^
+                static_cast<std::uint8_t>(byte)) * 1099511628211ULL;
+    }
+    if (tokenizer.fingerprint() != expected_fingerprint)
+        throw std::runtime_error("Native BPE tokenizer fingerprint is incorrect");
     const auto encoded = tokenizer.encode("hello hello");
     if (encoded != std::vector<std::size_t>{262, 32, 262})
         throw std::runtime_error("C++ BPE encoder does not match the merge table");
