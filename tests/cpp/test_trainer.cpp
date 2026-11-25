@@ -24,6 +24,12 @@ int main() {
     if (stats.steps != 4 || !std::isfinite(stats.average_loss))
         throw std::runtime_error("Training epoch statistics are invalid");
 
+    const auto validation = trainer.evaluate({10, 11, 12, 13, 14});
+    if (validation.steps != 4 || !std::isfinite(validation.average_loss) || validation.average_loss <= 0.0)
+        throw std::runtime_error("Validation metrics are invalid");
+    if (trainer.steps() != 5)
+        throw std::runtime_error("Evaluation unexpectedly changed the optimizer step count");
+
     std::cout << "FLAWD training loop tests passed.\n";
     return 0;
 }
