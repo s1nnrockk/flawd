@@ -179,4 +179,49 @@ void SGD::set_learning_rate(float learning_rate) {
 }
 float SGD::learning_rate() const noexcept { return learning_rate_; }
 
+
+Scalar cross_entropy_loss(const ScalarVector& logits, std::size_t target_index) {
+    if (logits.empty()) throw std::invalid_argument("Cross entropy expects non-empty logits");
+    if (target_index >= logits.size()) throw std::out_of_range("Cross entropy target index is out of range");
+    const auto probabilities = softmax(logits);
+    return Scalar(0.0F) - flawd::log(probabilities[target_index]);
+}
+
+Adam::Adam(std::vector<Scalar> parameters, float learning_rate, float beta1,
+           float beta2, float epsilon)
+    : parameters_(std::move(parameters)),
+      first_moment_(parameters_.size(), 0.0F),
+      second_moment_(parameters_.size(), 0.0F),
+      learning_rate_(learning_rate), beta1_(beta1), beta2_(beta2), epsilon_(epsilon) {
+    set_learning_rate(learning_rate);
+    if (!(beta1 > 0.0F && beta1 < 1.0F) || !(beta2 > 0.0F && beta2 < 1.0F))
+        throw std::invalid_argument("Adam beta values must be between zero and one");
+    if (!(epsilon > 0.0F) || !std::isfinite(epsilon))
+        throw std::invalid_argument("Adam epsilon must be finite and positive");
+}
+void Adam::zero_grad() noexcept {
+    for (auto& parameter : parameters_) parameter.zero_grad();
+}
+void Adam::step() {
+    ++step_count_;
+    const float correction1 = 1.0F - std::pow(beta1_, static_cast<float>(step_count_));
+    const float correction2 = 1.0F - std::pow(beta2_, static_cast<float>(step_count_));
+    for (std::size_t i = 0; i < parameters_.size(); ++i) {
+        const float gradient = parameters_[i].grad();
+        first_moment_[i] = beta1_ * first_moment_[i] + (1.0F - beta1_) * gradient;
+        second_moment_[i] = beta2_ * second_moment_[i] + (1.0F - beta2_) * gradient * gradient;
+        const float corrected_first = first_moment_[i] / correction1;
+        const float corrected_second = second_moment_[i] / correction2;
+        const float update = learning_rate_ * corrected_first /
+            (std::sqrt(corrected_second) + epsilon_);
+        parameters_[i].set_value(parameters_[i].value() - update);
+    }
+}
+void Adam::set_learning_rate(float learning_rate) {
+    if (!(learning_rate > 0.0F) || !std::isfinite(learning_rate))
+        throw std::invalid_argument("Learning rate must be finite and positive");
+    learning_rate_ = learning_rate;
+}
+float Adam::learning_rate() const noexcept { return learning_rate_; }
+
 } // namespace flawd
