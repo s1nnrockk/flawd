@@ -18,6 +18,8 @@ public:
     float train_step(const std::vector<std::size_t>& input_tokens, std::size_t target_token);
     TrainingStats train(const std::vector<std::size_t>& token_stream,
                         std::size_t epochs = 1, std::size_t stride = 1);
+    TrainingStats evaluate(const std::vector<std::size_t>& token_stream,
+                           std::size_t stride = 1);
     void set_learning_rate(float learning_rate);
     std::size_t steps() const noexcept;
 
