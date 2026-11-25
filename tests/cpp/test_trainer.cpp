@@ -1,8 +1,10 @@
 #include "flawd/trainer.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 int main() {
     flawd::ModelConfig config;
@@ -30,6 +32,26 @@ int main() {
     if (trainer.steps() != 5)
         throw std::runtime_error("Evaluation unexpectedly changed the optimizer step count");
 
-    std::cout << "FLAWD training loop tests passed.\n";
+    const std::vector<std::size_t> masked_tokens{10, 11, 12, 13, 14};
+    const std::vector<std::uint8_t> mask{0, 0, 1, 0, 1};
+    const auto masked = trainer.train(masked_tokens, mask);
+    if (masked.steps != 2)
+        throw std::runtime_error("Assistant-only mask did not select the expected targets");
+    const auto masked_validation = trainer.evaluate(masked_tokens, mask);
+    if (masked_validation.steps != 2 || !std::isfinite(masked_validation.average_loss))
+        throw std::runtime_error("Masked validation metrics are invalid");
+    if (trainer.steps() != 7)
+        throw std::runtime_error("Masked evaluation changed optimizer step count");
+
+    bool rejected_empty_mask = false;
+    try {
+        trainer.train(masked_tokens, std::vector<std::uint8_t>(masked_tokens.size(), 0));
+    } catch (const std::invalid_argument&) {
+        rejected_empty_mask = true;
+    }
+    if (!rejected_empty_mask)
+        throw std::runtime_error("Trainer accepted a mask with no supervised targets");
+
+    std::cout << "FLAWD training loop tests passed.\\n";
     return 0;
 }
