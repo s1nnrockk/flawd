@@ -13,7 +13,7 @@ class CorpusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "data.jsonl"
             output = Path(directory) / "data.tokens"
-            source.write_text(json.dumps({"text": "Hi"}) + "\\n", encoding="utf-8")
+            source.write_text(json.dumps({"text": "Hi"}) + "\n", encoding="utf-8")
             stats = tokenize_jsonl(
                 source, output,
                 source_description="Test corpus",
@@ -44,7 +44,7 @@ class CorpusTests(unittest.TestCase):
                 {"role": "system", "content": "Rules"},
                 {"role": "user", "content": "Question"},
                 {"role": "assistant", "content": "Answer"},
-            ]}) + "\\n", encoding="utf-8")
+            ]}) + "\n", encoding="utf-8")
             tokenize_jsonl(source, output)
             payload = output.read_bytes()
             _, version, _, count = struct.unpack("<8sIIQ", payload[:24])
@@ -54,9 +54,9 @@ class CorpusTests(unittest.TestCase):
             ids = [item[0] for item in records]
             flags = [item[1] for item in records]
             decoded = tokenizer.decode(ids[1:-1])
-            self.assertIn("<|system|>\\nRules\\n<|user|>\\nQuestion\\n<|assistant|>\\nAnswer\\n", decoded)
+            self.assertIn("<|system|>\nRules\n<|user|>\nQuestion\n<|assistant|>\nAnswer\n", decoded)
             answer_start = decoded.index("Answer")
-            answer_end = answer_start + len("Answer\\n")
+            answer_end = answer_start + len("Answer\n")
             self.assertTrue(all(flags[1 + answer_start:1 + answer_end]))
             self.assertFalse(any(flags[1:1 + answer_start]))
             self.assertEqual(flags[-1], 0)
