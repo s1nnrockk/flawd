@@ -75,21 +75,25 @@ class ByteBPETokenizer(ByteTokenizer):
             self._children[token_id] = pair
 
     @classmethod
-    def train(cls, texts, *, vocab_size: int = 1024,
-              min_frequency: int = 2, max_training_bytes: int = 2_000_000):
+    def train(cls, texts, *, vocab_size: int = 512,
+              min_frequency: int = 2, max_training_bytes: int = 250_000):
         if not isinstance(vocab_size, int) or not 259 <= vocab_size <= 65536:
             raise ValueError("vocab_size must be between 259 and 65536")
         if not isinstance(min_frequency, int) or min_frequency < 2:
             raise ValueError("min_frequency must be at least 2")
+        if not isinstance(max_training_bytes, int) or max_training_bytes < 1:
+            raise ValueError("max_training_bytes must be positive")
         sequences = []
         total_bytes = 0
         for text in texts:
             if not isinstance(text, str):
                 raise TypeError("training texts must be strings")
             encoded = text.encode("utf-8")
+            remaining = max_training_bytes - total_bytes
+            if remaining <= 0:
+                break
+            encoded = encoded[:remaining]
             total_bytes += len(encoded)
-            if total_bytes > max_training_bytes:
-                raise ValueError("BPE training sample exceeds max_training_bytes")
             if encoded:
                 sequences.append(list(encoded))
         merges = []
