@@ -9,6 +9,9 @@ description = "Independent tools and data pipeline for the FLAWD language model"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+datasets = ["datasets>=3.0,<5"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["flawd*"]
