@@ -74,7 +74,8 @@ TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     bool inside_record = false;
     for (std::uint64_t i = 0; i < count; ++i) {
         const auto token = read_little_endian<std::uint16_t>(input);
-        const auto flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
+        std::uint8_t flag = version == 2 ? read_little_endian<std::uint8_t>(input) : 1;
+        if (version == 1 && token == 257) flag = 0;
         if (token >= vocabulary) throw std::runtime_error("Token ID is outside the vocabulary");
         if (flag > 1) throw std::runtime_error("Token loss mask must be 0 or 1");
         if (token == 256)
