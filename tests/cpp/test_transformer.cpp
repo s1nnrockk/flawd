@@ -74,6 +74,14 @@ int main() {
     catch (const std::runtime_error&) { rejected_checkpoint = true; }
     if (!rejected_checkpoint)
         throw std::runtime_error("Checkpoint accepted incompatible attention configuration");
+    auto different_tokenizer = config;
+    ++different_tokenizer.tokenizer_fingerprint;
+    flawd::TransformerModel mismatched_tokenizer_model(different_tokenizer);
+    bool rejected_tokenizer = false;
+    try { mismatched_tokenizer_model.load_checkpoint(checkpoint_path); }
+    catch (const std::runtime_error&) { rejected_tokenizer = true; }
+    if (!rejected_tokenizer)
+        throw std::runtime_error("Checkpoint accepted a mismatched tokenizer fingerprint");
     std::remove(checkpoint_path.c_str());
 
     if (model.parameters().empty())
