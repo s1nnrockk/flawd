@@ -2,6 +2,14 @@ name: FLAWD corpus preparation
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "python/flawd/oasst_import.py"
+      - "python/flawd/dataset.py"
+      - "python/pyproject.toml"
+      - "data/seed/**"
+      - ".github/workflows/prepare-corpus.yml"
 
 permissions:
   contents: read
