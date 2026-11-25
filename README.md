@@ -67,9 +67,9 @@ For assistant-style training, use conversation records instead of plain text:
 {"messages":[{"role":"system","content":"Be helpful and accurate."},{"role":"user","content":"Explain what a loop does."},{"role":"assistant","content":"A loop repeats a block of instructions while a condition holds, or for each item in a sequence."}]}
 ```
 
-The exporter stores assistant-only loss masks in FLAWDTOK v2. User and system messages remain visible to the model as context; assistant responses and the final end-of-turn token are training targets. Keep conversations complete and ensure every record contains both a user and assistant message.
+The exporter stores assistant-only loss masks in FLAWDTOK v2. User and system messages remain visible to the model as context; assistant responses and the final end-of-turn token are training targets. Conversations must alternate user/assistant turns, may have one system message at the beginning, and must end with an assistant response. Reserved role markers inside message content are rejected.
 
-The initial configuration is intentionally tiny and CPU-oriented. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI reports held-out validation loss when a separate validation token file is supplied. After training,
+The initial configuration is intentionally tiny and CPU-oriented. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI reports held-out validation loss when a separate validation token file is supplied. To continue from an existing checkpoint, pass the validation corpus and checkpoint as the final two arguments: `flawd_train train.tokens model.flawd 1 validation.tokens previous.flawd`. The current optimizer state is restarted when resuming; model weights are restored. After training,
 start the local text-generation CLI:
 
 ```powershell
