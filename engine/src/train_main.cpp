@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -27,6 +28,18 @@ struct TokenCorpus {
     std::vector<std::size_t> tokens;
     std::vector<std::uint8_t> loss_mask;
 };
+
+std::size_t parse_epochs(const char* argument) {
+    const std::string value(argument);
+    if (value.empty() || value.front() == '-')
+        throw std::invalid_argument("Epoch count must be a positive integer");
+    std::size_t consumed = 0;
+    const auto parsed = std::stoull(value, &consumed);
+    if (consumed != value.size() || parsed == 0 ||
+        parsed > static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max()))
+        throw std::invalid_argument("Epoch count must be a positive integer");
+    return static_cast<std::size_t>(parsed);
+}
 
 TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     std::ifstream input(path, std::ios::binary);
@@ -80,8 +93,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     try {
-        const std::size_t epochs = argc >= 4 ? static_cast<std::size_t>(std::stoull(argv[3])) : 1;
-        if (epochs == 0) throw std::invalid_argument("Epoch count must be positive");
+        const std::size_t epochs = argc >= 4 ? parse_epochs(argv[3]) : 1;
 
         flawd::ModelConfig config;
         config.vocabulary_size = 259;
@@ -94,7 +106,12 @@ int main(int argc, char** argv) {
 
         auto training = load_tokens(argv[1], config.vocabulary_size);
         TokenCorpus validation;
-        if (argc >= 5) validation = load_tokens(argv[4], config.vocabulary_size);
+        if (argc >= 5) {
+            std::error_code path_error;
+            if (std::filesystem::equivalent(argv[1], argv[4], path_error) && !path_error)
+                throw std::invalid_argument("Training and validation files must be different");
+            validation = load_tokens(argv[4], config.vocabulary_size);
+        }
 
         flawd::TransformerModel model(config);
         if (argc == 6) model.load_checkpoint(argv[5]);
