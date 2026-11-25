@@ -49,6 +49,45 @@ class DatasetTests(unittest.TestCase):
             self.assertEqual(train.read_text(encoding="utf-8"), second_train.read_text(encoding="utf-8"))
             self.assertEqual(validation.read_text(encoding="utf-8"), second_validation.read_text(encoding="utf-8"))
 
+    def test_cleaning_preserves_and_merges_source_license_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "raw.jsonl"
+            output = root / "clean.jsonl"
+            source.write_text(
+                json.dumps({"text": "same answer", "source": "OpenAssistant/oasst1",
+                            "license": "Apache-2.0", "languages": ["en"]}) + "\n"
+                + json.dumps({"text": " same   answer ", "source": "Dolly",
+                              "license": "CC-BY-SA-3.0", "category": "qa"}) + "\n",
+                encoding="utf-8",
+            )
+            stats = build_clean_dataset(source, output)
+            self.assertEqual(stats["output_records"], 1)
+            record = next(read_jsonl(output))
+            self.assertEqual(record["source"], "OpenAssistant/oasst1")
+            self.assertEqual(record["sources"], ["OpenAssistant/oasst1", "Dolly"])
+            self.assertEqual(record["licenses"], ["Apache-2.0", "CC-BY-SA-3.0"])
+            self.assertEqual(record["languages"], ["en"])
+            self.assertEqual(record["categories"], ["qa"])
+
+    def test_train_validation_split_keeps_record_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "raw.jsonl"
+            train = root / "train.jsonl"
+            validation = root / "validation.jsonl"
+            source.write_text(
+                "".join(json.dumps({"text": f"record {index}", "source": "seed",
+                                    "license": "Unspecified"}) + "\n"
+                        for index in range(20)),
+                encoding="utf-8",
+            )
+            build_clean_dataset(source, train, validation, 0.2, 77)
+            combined = list(read_jsonl(train)) + list(read_jsonl(validation))
+            self.assertEqual(len(combined), 20)
+            self.assertTrue(all(record.get("source") == "seed" for record in combined))
+            self.assertTrue(all(record.get("license") == "Unspecified" for record in combined))
+
     def test_formats_conversation_messages_for_assistant_training(self):
         formatted = format_conversation([
             {"role": "system", "content": "Be accurate."},
