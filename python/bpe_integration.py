@@ -58,7 +58,8 @@ def main() -> int:
             [str(chat_exe), str(checkpoint), "0", "40", str(tokenizer_path)],
             input="hello\n\n", capture_output=True, text=True, timeout=60,
         )
-        if chat.returncode != 0 or "FLAWD local model loaded" not in chat.stdout:
+        if (chat.returncode != 0 or "FLAWD local model loaded" not in chat.stdout
+                or chat.stdout.count("You>") < 2):
             raise RuntimeError(
                 "Native BPE inference failed.\n"
                 + chat.stdout + "\n" + chat.stderr
