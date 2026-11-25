@@ -104,7 +104,7 @@ def read_jsonl(path: str | Path) -> Iterator[dict[str, Any]]:
                 yield cleaned
 
 
-def _merge_provenance(target: dict[str, Any], incoming: dict[str, Any]) -> None:
+def merge_provenance(target: dict[str, Any], incoming: dict[str, Any]) -> None:
     """Merge attribution metadata when identical text occurs in multiple sources."""
     for singular, plural in (
         ("source", "sources"),
@@ -156,7 +156,7 @@ def build_clean_dataset(
             positions[text] = len(records)
             records.append(dict(record))
         else:
-            _merge_provenance(records[positions[text]], record)
+            merge_provenance(records[positions[text]], record)
 
     destination_path = Path(destination)
     destination_path.parent.mkdir(parents=True, exist_ok=True)
