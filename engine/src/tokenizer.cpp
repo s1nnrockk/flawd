@@ -4,6 +4,7 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 namespace flawd {
 namespace {
