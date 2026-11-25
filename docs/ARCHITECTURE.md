@@ -25,7 +25,7 @@ The current Transformer supports configurable multi-head causal attention. It re
 
 ## Python data pipeline
 
-- ByteTokenizer: UTF-8 byte IDs 0–255 and reserved PAD/BOS/EOS IDs.
+- ByteTokenizer: UTF-8 byte IDs 0–255 and reserved PAD/BOS/EOS IDs; each document is wrapped with BOS/EOS.
 - Dataset tools: JSONL validation, whitespace normalization, exact deduplication, deterministic document-level train/validation splitting, and role-tagged conversation serialization.
 - Corpus export: writes the FLAWDTOK binary stream consumed by the C++ trainer.
 - The token file header is little-endian: 8-byte magic, uint32 version, uint32
