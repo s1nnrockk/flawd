@@ -18,6 +18,8 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: BPE end-to-end integration
+        run: python python/bpe_integration.py
 
   python:
     name: Python tests
