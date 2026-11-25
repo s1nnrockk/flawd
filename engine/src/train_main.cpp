@@ -47,6 +47,16 @@ std::size_t parse_epochs(const char* argument) {
     return parse_positive_size(argument, "Epoch count");
 }
 
+bool same_path(const std::string& left, const std::string& right) {
+    const auto left_absolute = std::filesystem::absolute(left).lexically_normal();
+    const auto right_absolute = std::filesystem::absolute(right).lexically_normal();
+    if (left_absolute == right_absolute) return true;
+    std::error_code error;
+    if (std::filesystem::exists(left_absolute) && std::filesystem::exists(right_absolute))
+        return std::filesystem::equivalent(left_absolute, right_absolute, error) && !error;
+    return false;
+}
+
 TokenCorpus load_tokens(const std::string& path, std::size_t expected_vocab) {
     std::ifstream input(path, std::ios::binary);
     if (!input) throw std::runtime_error("Cannot open token file: " + path);
@@ -128,6 +138,10 @@ int main(int argc, char** argv) {
     }
     try {
         const std::size_t epochs = argc >= 4 ? parse_epochs(argv[3]) : 1;
+        if (same_path(argv[1], argv[2]))
+            throw std::invalid_argument("Model checkpoint path must not overwrite the training corpus");
+        if (argc >= 5 && same_path(argv[4], argv[2]))
+            throw std::invalid_argument("Model checkpoint path must not overwrite the validation corpus");
 
         auto training = load_tokens(argv[1], 0);
         flawd::ModelConfig config;
