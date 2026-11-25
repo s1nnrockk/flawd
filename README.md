@@ -38,14 +38,6 @@ Create a UTF-8 JSONL file with one text record per line for ordinary language-mo
 {"text":"A second passage for the tiny experiment."}
 ```
 
-For a more compact vocabulary, train a byte-pair tokenizer from the cleaned training split, then use the same tokenizer for both train and validation exports:
-```powershell
-python -m flawd.tokenizer_cli train.jsonl tokenizer.bpe --vocab-size 512
-python -m flawd.corpus_cli train.jsonl train.tokens --tokenizer tokenizer.bpe
-python -m flawd.corpus_cli validation.jsonl validation.tokens --tokenizer tokenizer.bpe
-```
-The tokenizer file is portable and is used by both Python data preparation and the native C++ chat executable. BPE training defaults to a bounded 250 KB sample and 512 vocabulary entries to keep the first run manageable on CPU.
-
 Clean and tokenize it:
 
 ```powershell
@@ -55,6 +47,16 @@ python -m flawd.corpus_cli train.jsonl train.tokens
 python -m flawd.corpus_cli validation.jsonl validation.tokens
 cd ..
 ```
+
+For a more compact vocabulary, train a byte-pair tokenizer from the training split, then use the exact same tokenizer for every split:
+```powershell
+cd python
+python -m flawd.tokenizer_cli train.jsonl tokenizer.bpe --vocab-size 512
+python -m flawd.corpus_cli train.jsonl train.tokens --tokenizer tokenizer.bpe
+python -m flawd.corpus_cli validation.jsonl validation.tokens --tokenizer tokenizer.bpe
+cd ..
+```
+The portable tokenizer file is shared by Python data preparation and native C++ inference. BPE training uses a bounded 250 KB sample and a 512-token target vocabulary by default to keep preparation manageable on CPU.
 
 Build FLAWD:
 
@@ -85,10 +87,16 @@ For assistant-style training, use conversation records instead of plain text:
 The exporter stores assistant-only loss masks in FLAWDTOK v2. User and system messages remain visible to the model as context; assistant responses and the final end-of-turn token are training targets. Conversations must alternate user/assistant turns, may have one system message at the beginning, and must end with an assistant response. Reserved role markers inside message content are rejected.
 
 The CLI currently accumulates gradients across four supervised targets before each Adam update; incomplete final groups are averaged correctly. This reduces optimizer-update overhead and produces a less noisy update without keeping multiple full computation graphs alive. The default configuration is intentionally tiny and CPU-oriented; larger dimensions are configurable, and inference reads the saved configuration from the checkpoint. It is suitable for verifying the end-to-end training pipeline, not for producing a capable general-purpose assistant. The CLI evaluates held-out validation loss after every epoch when a separate validation token file is supplied. With validation enabled, it saves the best checkpoint and stops after three consecutive epochs without a meaningful improvement (minimum improvement: 0.0001). This avoids blindly training for every requested epoch and keeps the best validation checkpoint rather than the final, potentially overfit epoch. Without a validation file, it runs the requested number of epochs and saves the final checkpoint. To continue from an existing checkpoint, pass the validation corpus and checkpoint as the final two arguments: `flawd_train train.tokens model.flawd 1 validation.tokens previous.flawd`. The current optimizer state is restarted when resuming; model weights are restored. After training,
-start the local text-generation CLI (append the tokenizer file when training used BPE):
+start local text generation. For a byte-tokenized checkpoint:
 
 ```powershell
 .\build\Release\flawd_chat.exe .\model.flawd
+```
+
+For a BPE-tokenized checkpoint, pass the matching tokenizer after temperature and top-k:
+
+```powershell
+.\build\Release\flawd_chat.exe .\model.flawd 0.8 40 .\python\tokenizer.bpe
 ```
 
 It accepts a prompt in the terminal. Sampling defaults to temperature 0.8 and top-k 40; pass `0` as temperature for greedy decoding. The model is an experimental byte-level
