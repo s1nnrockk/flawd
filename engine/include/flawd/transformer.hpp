@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace flawd {
@@ -56,6 +57,8 @@ public:
     Sequence forward(const std::vector<std::size_t>& token_ids);
     std::vector<Scalar> parameters();
     const ModelConfig& config() const noexcept;
+    void save_checkpoint(const std::string& path);
+    void load_checkpoint(const std::string& path);
 
 private:
     ModelConfig config_;
