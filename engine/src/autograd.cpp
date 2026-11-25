@@ -22,6 +22,7 @@ void Scalar::set_value(float value) {
     node_->data = value;
 }
 void Scalar::zero_grad() noexcept { node_->gradient = 0.0F; }
+void Scalar::scale_grad(float factor) noexcept { node_->gradient *= factor; }
 
 void Scalar::backward() const {
     std::vector<std::shared_ptr<Node>> ordered;
