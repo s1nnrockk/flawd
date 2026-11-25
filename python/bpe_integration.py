@@ -55,8 +55,17 @@ def main() -> int:
         if "FLAWD training complete" not in training.stdout or not checkpoint.is_file():
             raise RuntimeError("Native BPE training did not produce a checkpoint")
 
+        resumed_checkpoint = directory / "resumed.flawd"
+        resumed_training = subprocess.run(
+            [str(train_exe), str(train_tokens), str(resumed_checkpoint), "1",
+             str(validation_tokens), str(checkpoint), "64", "8", "16", "1", "4"],
+            check=True, capture_output=True, text=True, timeout=120,
+        )
+        if "FLAWD training complete" not in resumed_training.stdout or not resumed_checkpoint.is_file():
+            raise RuntimeError("Native training did not resume from a full optimizer checkpoint")
+
         chat = subprocess.run(
-            [str(chat_exe), str(checkpoint), "0", "40", str(tokenizer_path)],
+            [str(chat_exe), str(resumed_checkpoint), "0", "40", str(tokenizer_path)],
             input="hello\nwhat is 2+2?\n\n", capture_output=True, text=True, timeout=60,
         )
         if (chat.returncode != 0 or "FLAWD local model loaded" not in chat.stdout
