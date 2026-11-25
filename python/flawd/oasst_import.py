@@ -16,7 +16,7 @@ from .dataset import format_conversation
 DATASET_ID = "OpenAssistant/oasst1"
 LANGUAGE_MAP = {"en": "en", "ru": "ru"}
 ROLE_MAP = {"prompter": "user", "assistant": "assistant"}
-_RESERVED = re.compile(r"<\\|(system|user|assistant)\\|>")
+_RESERVED = re.compile(r"<\|(system|user|assistant)\|>")
 
 
 def _usable(row: dict[str, Any], languages: set[str]) -> bool:
@@ -121,9 +121,9 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str]) 
 
 def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\\n") as stream:
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
         for record in records:
-            stream.write(json.dumps(record, ensure_ascii=False) + "\\n")
+            stream.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def main() -> int:
