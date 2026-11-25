@@ -1,34 +1,42 @@
 # FLAWD
 
-**FLAWD** is an independent AI project built with **C++ and Python**.
-
-The goal is to build and train our own language model, run inference locally, and
-only later provide a hosted API and website. The project does not depend on
-third-party hosted AI APIs for its own model inference.
+**FLAWD** is an independent language-model project built with C++ and Python.
+The long-term goal is to train an original model, run inference locally, and
+build a hosted API and website only after the model runtime is dependable.
 
 ## Current foundation
 
-- C++17 tensor engine with elementwise operations, matrix multiplication,
-  transpose, ReLU, and softmax.
-- C++ tests registered with CTest.
-- Python package with a lossless UTF-8 byte tokenizer.
-- JSONL dataset validation helpers.
-- GitHub Actions CI for Windows C++ and Python checks.
+### C++ engine
+- Contiguous tensor storage and validated tensor shapes.
+- Elementwise add, subtract, multiply, scaling, and ReLU.
+- 2D matrix multiplication and transpose.
+- Numerically stable tensor softmax.
+- Scalar reverse-mode automatic differentiation.
+- Trainable Linear and Embedding layers.
+- ReLU, Tanh, LayerNorm, vector softmax, and Sequential.
+- Mean-squared-error loss and SGD optimizer.
+- CTest unit tests.
 
-The byte tokenizer is a simple baseline, not the final tokenizer. A trainable
-subword tokenizer and the actual neural model come in later milestones.
+### Python tools
+- Lossless UTF-8 byte tokenizer with reserved special-token IDs.
+- JSONL dataset validation, whitespace normalization, and exact deduplication.
+- Dataset-cleaning command line tool.
+- Python unit tests.
+
+### Automation
+- GitHub Actions builds the C++ project and runs C++ and Python tests on Windows.
 
 ## Repository layout
 
-- engine/ — C++ numerical and inference engine.
-- python/flawd/ — Python tokenizer and dataset utilities.
+- engine/ — C++ numerical engine, autograd, and neural-network layers.
+- python/flawd/ — tokenizer and dataset utilities.
 - python/tests/ — Python unit tests.
 - tests/cpp/ — C++ unit tests.
-- data/ — dataset format documentation; large datasets stay outside Git.
-- docs/ — architecture and development notes.
-- .github/workflows/ — automated checks.
+- data/ — dataset format documentation.
+- docs/ — architecture and engineering notes.
+- .github/workflows/ — CI checks.
 
-## Build the C++ foundation
+## Build and test
 
 Requirements: CMake 3.20+ and a C++17 compiler.
 
@@ -39,32 +47,34 @@ ctest --test-dir build -C Release --output-on-failure
 .\build\Release\flawd_demo.exe
 ```
 
-## Run Python tests
-
-From the repository root:
+Python tests:
 
 ```powershell
 cd python
 python -m unittest discover -s tests -v
 ```
 
-## Development order
+Clean a dataset:
 
-1. Complete and verify the core engine.
-2. Expand tokenizer and dataset tooling.
-3. Add automatic differentiation and neural-network layers.
-4. Implement a small Transformer.
-5. Build training, checkpointing, and evaluation.
-6. Add local inference and optimize it.
-7. Build the hosted API and website after the model runtime is stable.
+```powershell
+cd python
+python -m flawd.dataset_cli input.jsonl clean.jsonl
+```
 
-## Hardware target
+## Development sequence
 
-The first model and tools will be designed to run in small experiments on
-consumer hardware. Large-scale model training requires substantially more
-memory and compute; the project will not pretend otherwise.
+1. Finish and verify the numerical and autograd foundations.
+2. Complete Transformer primitives and model configuration.
+3. Implement a small Transformer language model.
+4. Add batching, training loops, checkpointing, and evaluation.
+5. Add local text generation and performance work.
+6. Build the hosted API, accounts, and website.
 
-## Security and data
+The initial implementation is intentionally small. Training a useful large
+language model requires large, well-documented datasets and substantial compute;
+the project will measure its limits rather than claim otherwise.
 
-Never commit passwords, private keys, API secrets, private datasets, or user
-personal data. Keep dataset source and usage permissions documented.
+## Data and security
+
+Training data must have documented sources and usage permissions. Never commit
+private datasets, personal data, passwords, private keys, or API secrets.
