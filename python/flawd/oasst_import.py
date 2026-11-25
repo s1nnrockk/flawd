@@ -17,6 +17,7 @@ from .dataset import format_conversation
 DATASET_ID = "OpenAssistant/oasst1"
 LANGUAGE_MAP = {"en": "en", "ru": "ru"}
 ROLE_MAP = {"prompter": "user", "assistant": "assistant"}
+SOURCE_LICENSE = "Apache-2.0"
 _RESERVED = re.compile(r"<\|(system|user|assistant)\|>")
 
 
@@ -24,7 +25,12 @@ def _label_value(labels: Any, name: str) -> float | None:
     """Read a label score from either the nested dataset dict or Arrow's column form."""
     try:
         value = None
-        if isinstance(labels, dict) and isinstance(labels.get("name"), list):
+        if isinstance(labels, list):
+            for item in labels:
+                if isinstance(item, dict) and item.get("name") == name:
+                    value = item.get("value")
+                    break
+        elif isinstance(labels, dict) and isinstance(labels.get("name"), list):
             names = labels.get("name", [])
             values = labels.get("value", [])
             if name in names:
@@ -135,16 +141,25 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], 
         if messages is None:
             skipped_trees += 1
             continue
+        path_texts = {message["content"] for message in messages}
+        path_languages = sorted({
+            str(row.get("lang") or "").lower().split("-")[0]
+            for row in tree_rows
+            if str(row.get("text") or "").strip() in path_texts
+        } & languages)
         output.append({
             "messages": messages,
             "source": DATASET_ID,
+            "license": SOURCE_LICENSE,
             "source_split": split_name,
-            "languages": sorted({
-                str(row.get("lang") or "").lower().split("-")[0]
-                for row in tree_rows if row.get("lang")
-            } & languages),
+            "languages": path_languages,
         })
+    language_counts: dict[str, int] = defaultdict(int)
+    for record in output:
+        for language in record.get("languages", []):
+            language_counts[language] += 1
     return output, {
+        "records_by_language": dict(sorted(language_counts.items())),
         "source_rows": sum(len(rows) for rows in trees.values()),
         "conversation_trees": len(trees),
         "exported_conversations": len(output),
