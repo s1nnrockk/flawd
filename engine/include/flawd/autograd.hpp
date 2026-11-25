@@ -11,7 +11,6 @@ public:
     void set_value(float value);
     void zero_grad() noexcept;
     void backward() const;
-
     friend Scalar operator+(const Scalar&, const Scalar&);
     friend Scalar operator-(const Scalar&, const Scalar&);
     friend Scalar operator*(const Scalar&, const Scalar&);
@@ -21,7 +20,6 @@ public:
     friend Scalar exp(const Scalar&);
     friend Scalar sqrt(const Scalar&);
     friend Scalar log(const Scalar&);
-
 private:
     struct Node;
     explicit Scalar(std::shared_ptr<Node> node);
