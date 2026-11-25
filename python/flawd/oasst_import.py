@@ -19,11 +19,33 @@ ROLE_MAP = {"prompter": "user", "assistant": "assistant"}
 _RESERVED = re.compile(r"<\|(system|user|assistant)\|>")
 
 
+def _label_value(labels: Any, name: str) -> float | None:
+    """Read a label score from either the nested dataset dict or Arrow's column form."""
+    try:
+        value = labels.get(name) if isinstance(labels, dict) else None
+        if isinstance(value, dict):
+            value = value.get("value")
+        elif isinstance(value, list):
+            value = value[0] if value else None
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _has_quality_flags(row: dict[str, Any]) -> bool:
+    labels = row.get("labels")
+    for name in ("spam", "lang_mismatch", "pii", "not_appropriate", "hate_speech", "sexual_content", "fails_task"):
+        score = _label_value(labels, name)
+        if score is not None and score >= 0.5:
+            return True
+    return False
+
+
 def _usable(row: dict[str, Any], languages: set[str]) -> bool:
     lang = str(row.get("lang") or "").lower().split("-")[0]
     if lang not in languages or row.get("deleted") is True:
         return False
-    if row.get("review_result") is False:
+    if row.get("review_result") is False or _has_quality_flags(row):
         return False
     text = row.get("text")
     if not isinstance(text, str) or not text.strip() or _RESERVED.search(text):
@@ -88,6 +110,9 @@ def convert_split(dataset_split: Iterable[dict[str, Any]], languages: set[str], 
     trees: dict[str, list[dict[str, Any]]] = defaultdict(list)
     skipped_rows = 0
     for row in dataset_split:
+        if row.get("tree_state") not in (None, "ready_for_export"):
+            skipped_rows += 1
+            continue
         tree_id = str(row.get("message_tree_id") or "")
         if not tree_id:
             skipped_rows += 1
