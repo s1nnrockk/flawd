@@ -11,6 +11,7 @@ add_library(flawd_engine
     engine/src/autograd.cpp
     engine/src/nn.cpp
     engine/src/transformer.cpp
+    engine/src/trainer.cpp
 )
 target_include_directories(flawd_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/engine/include)
 
