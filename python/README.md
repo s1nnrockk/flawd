@@ -50,7 +50,9 @@ python -m flawd.corpus_cli validation.jsonl validation.tokens
 The second command writes a little-endian FLAWDTOK binary token stream and a JSON
 manifest. Train and validation corpora stay separate to avoid measuring training
 examples as held-out quality. The C++ `flawd_train` executable can report the
-validation loss when both token files are supplied.
+validation loss when both token files are supplied. Corpus export also accepts
+`--source-description`, `--license`, and `--language`; these are copied into the
+manifest. Record real provenance and permissions rather than guessing them.
 
 ## Tokenizer
 
