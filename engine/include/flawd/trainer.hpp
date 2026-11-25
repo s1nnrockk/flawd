@@ -3,6 +3,7 @@
 #include "flawd/transformer.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace flawd {
