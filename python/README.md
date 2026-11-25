@@ -30,8 +30,18 @@ python -m flawd.corpus_cli clean.jsonl clean.tokens
 ```
 
 The first command validates records, normalizes whitespace, and removes exact
-duplicates. The second writes a little-endian FLAWDTOK binary token stream and
-a JSON manifest. The C++ `flawd_train` executable reads this format.
+duplicates. It can also create a deterministic document-level holdout split:
+
+```powershell
+python -m flawd.dataset_cli raw.jsonl train.jsonl --validation-output validation.jsonl --validation-ratio 0.05 --seed 2026
+python -m flawd.corpus_cli train.jsonl train.tokens
+python -m flawd.corpus_cli validation.jsonl validation.tokens
+```
+
+The second command writes a little-endian FLAWDTOK binary token stream and a JSON
+manifest. Train and validation corpora stay separate to avoid measuring training
+examples as held-out quality. The C++ `flawd_train` executable can report the
+validation loss when both token files are supplied.
 
 ## Tokenizer
 
