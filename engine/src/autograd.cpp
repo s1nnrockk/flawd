@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <utility>
 #include <unordered_set>
-#include <unordered_set>
 
 namespace flawd {
 struct Scalar::Node {
