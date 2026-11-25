@@ -1,6 +1,7 @@
 #include "flawd/nn.hpp"
 
 #include <cmath>
+#include <algorithm>
 #include <limits>
 #include <random>
 #include <stdexcept>
@@ -267,6 +268,11 @@ void Adam::load_state(const AdamState& state) {
     step_count_ = static_cast<std::size_t>(state.step_count);
     first_moment_ = state.first_moment;
     second_moment_ = state.second_moment;
+}
+void Adam::reset_state() noexcept {
+    std::fill(first_moment_.begin(), first_moment_.end(), 0.0F);
+    std::fill(second_moment_.begin(), second_moment_.end(), 0.0F);
+    step_count_ = 0;
 }
 
 } // namespace flawd
