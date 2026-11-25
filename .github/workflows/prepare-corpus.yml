@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: flawd-corpus-preparation
+  cancel-in-progress: true
+
 jobs:
   prepare:
     name: Download, filter, and tokenize licensed datasets
@@ -54,7 +58,7 @@ jobs:
       - name: Fit BPE on training data only and export token files
         working-directory: python
         run: |
-          python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 1024 --max-training-bytes 180000 --shuffle-seed 2026
+          python -m flawd.tokenizer_cli training-run/train.jsonl training-run/tokenizer.bpe --vocab-size 768 --max-training-bytes 100000 --shuffle-seed 2026
           python -m flawd.corpus_cli training-run/train.jsonl training-run/train.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined licensed instruction corpus; train split" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
           python -m flawd.corpus_cli training-run/validation.jsonl training-run/validation.tokens --tokenizer training-run/tokenizer.bpe --source-description "FLAWD combined held-out validation corpus" --license "Apache-2.0 + CC-BY-SA-3.0" --language "ru,en"
 
@@ -86,7 +90,7 @@ jobs:
               "validation_records": validate_jsonl(root / "validation.jsonl"),
               "source_train_records_by_language": language_counts(root / "raw-train.jsonl"),
               "source_validation_records_by_language": language_counts(root / "raw-validation.jsonl"),
-              "tokenizer": "BPE; vocab target 1024; deterministically shuffled train records; trained on train split only",
+              "tokenizer": "BPE; vocab target 768; 100000-byte deterministic shuffled training sample; trained on train split only",
               "note": "Prepared corpus artifact; not a trained model checkpoint."
           }
           (root / "CORPUS_MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
