@@ -461,6 +461,14 @@ void TransformerModel::load_checkpoint(const std::string& path, Adam* optimizer)
             read(optimizer_state.beta2);
             read(optimizer_state.epsilon);
             read(optimizer_state.step_count);
+            if (!(optimizer_state.learning_rate > 0.0F) ||
+                !std::isfinite(optimizer_state.learning_rate) ||
+                !(optimizer_state.beta1 > 0.0F && optimizer_state.beta1 < 1.0F) ||
+                !(optimizer_state.beta2 > 0.0F && optimizer_state.beta2 < 1.0F) ||
+                !(optimizer_state.epsilon > 0.0F) || !std::isfinite(optimizer_state.epsilon) ||
+                optimizer_state.step_count >
+                    static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()))
+                throw std::runtime_error("Checkpoint contains invalid Adam hyperparameters");
             std::uint64_t moment_count = 0;
             read(moment_count);
             if (moment_count != count ||
